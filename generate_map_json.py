@@ -1,3 +1,22 @@
+"""
+generate_geojson.py
+-------------------
+Generates per-feature GeoJSON and timeseries files for the GBMIM atlas.
+
+Procedure
+---------
+1. Scan storage dir → get authoritative GWW ids (784 files).
+2. For each GWW id, find matching row in gpkg via GWW_reservoir_id column.
+3a. If that row has a valid GDW_ID → use it as canonical feature id.
+3b. If GDW_ID is null → parse GDW_bar_ids; use the first bar id found in a CSV.
+4. Look up canonical id in reservoir CSV then barrier CSV for lat/lng + metadata.
+5. Watershed polygon from the matched gpkg row's geometry.
+6. Runoff timeseries: search runoff_reservoir dir then runoff_barrier dir.
+7. Storage timeseries: keyed by GWW_reservoir_id.
+8. Downstream path: search reservoir downstream dir then barrier dir.
+9. Everything written under geojson/reservoir/.
+"""
+
 import argparse
 import json
 import os
@@ -13,31 +32,27 @@ import geopandas as gpd
 # ---------------------------------------------------------------------------
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Generate per-feature GeoJSON files for reservoirs and barriers.")
-    # Reservoir inputs
-    p.add_argument("--reservoirs_csv",            default="Dataset/GBMIM_Reservoirs.csv",
-                   help="CSV for reservoirs (id, lat, lng, ...)")
-    p.add_argument("--reservoirs_downstream_dir", default="Dataset/Downstream/Reservoir",
-                   help="Directory containing {id}_downstream_path.gpkg for reservoirs")
-    # Barrier inputs
-    p.add_argument("--barriers_csv",              default="Dataset/GBMIM_Barriers.csv",
-                   help="CSV for barriers (id, lat, lng, ...)")
-    p.add_argument("--barriers_downstream_dir",   default="Dataset/Downstream/Barrier",
-                   help="Directory containing {id}_downstream_path.gpkg for barriers")
-    # Shared inputs
-    p.add_argument("--watersheds",       default="Dataset/Merged_Catchment/GBMIM_barrier_merged_watersheds_filled.gpkg")
-    p.add_argument("--watershed_layer",  default=None)
-    p.add_argument("--watershed_id_col", default="GDW_ID")
-    # Runoff time series
-    p.add_argument("--runoff_reservoir_dir", default="Dataset/data/runoff_reservoir",
-                   help="Directory containing GDWID_{id}.txt time series for reservoirs")
-    p.add_argument("--runoff_barrier_dir",   default="Dataset/data/runoff_barrier",
-                   help="Directory containing GDWID_{id}.txt time series for barriers")
-    # Output
-    p.add_argument("--geojson_dir",      default="geojson")
-    p.add_argument("--line_simplify",    type=float, default=0.001,
-                   help="Simplification tolerance for downstream lines in degrees "
-                        "(default 0.001 ~ ~100m). Set 0 to disable.")
+    p = argparse.ArgumentParser(description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+
+    p.add_argument("--gpkg",          default="Dataset/combined_reservoirs.gpkg")
+    p.add_argument("--gpkg_layer",    default=None)
+    p.add_argument("--gpkg_id_col",   default="GDW_ID")
+
+    p.add_argument("--reservoirs_csv", default="Dataset/GBMIM_Reservoirs.csv")
+    p.add_argument("--barriers_csv",   default="Dataset/GBMIM_Barriers.csv")
+
+    p.add_argument("--reservoirs_downstream_dir", default="Dataset/Downstream/Reservoir")
+    p.add_argument("--barriers_downstream_dir",   default="Dataset/Downstream/Barrier")
+
+    p.add_argument("--runoff_reservoir_dir", default="Dataset/data/runoff_reservoir")
+    p.add_argument("--runoff_barrier_dir",   default="Dataset/data/runoff_barrier")
+
+    p.add_argument("--storage_dir", default="Dataset/Storage_timeseries")
+
+    p.add_argument("--geojson_dir",   default="geojson")
+    p.add_argument("--line_simplify", type=float, default=0.001)
+
     return p.parse_args()
 
 
@@ -45,179 +60,140 @@ def parse_args():
 # Helpers
 # ---------------------------------------------------------------------------
 
-def normalise_id(val) -> str:
-    s = str(val).strip()
-    if s.endswith(".0"):
-        s = s[:-2]
-    return s
+def norm_id(val) -> str | None:
+    """Strip leading zeros; return None for null/empty."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return None
+    try:
+        s = str(int(float(val))).lstrip("0")
+    except (ValueError, TypeError):
+        s = str(val).strip().lstrip("0")
+    return s if s else None
 
 
-# Extra columns included in coordinate JSON if present in CSV
-EXTRA_COLS = ["country", "Basin", "Areal_Impact (%)"]
+def parse_bar_ids(raw) -> list[str]:
+    """Parse GDW_bar_ids field (single or comma-separated) into list of norm ids."""
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return []
+    parts = str(raw).replace(";", ",").split(",")
+    return [x for x in (norm_id(p.strip()) for p in parts) if x]
 
 
-def load_features_csv(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv(csv_path)
-    required = {"id", "lat", "lng"}
-    missing = required - set(df.columns.str.lower())
-    if missing:
-        sys.exit(f"[ERROR] {csv_path} is missing columns: {missing}")
-    df["id"]  = df["id"].apply(normalise_id)
-    df["lat"] = pd.to_numeric(df["lat"], errors="coerce")
-    df["lng"] = pd.to_numeric(df["lng"], errors="coerce")
-    df = df.dropna(subset=["lat", "lng"])
-    keep = ["id", "lat", "lng"] + [c for c in EXTRA_COLS if c in df.columns]
-    found_extra = [c for c in EXTRA_COLS if c in df.columns]
-    if found_extra:
-        print(f"      Extra columns included: {found_extra}")
-    return df[keep]
+# ---------------------------------------------------------------------------
+# Loaders
+# ---------------------------------------------------------------------------
 
-
-def load_watersheds(gpkg_path: str, layer: str = None, id_col: str = None) -> gpd.GeoDataFrame:
+def load_gpkg(gpkg_path: str, layer: str | None) -> gpd.GeoDataFrame:
     layers = fiona.listlayers(gpkg_path)
     layer = layer or layers[0]
+    print(f"  Layer        : {layer}")
     gdf = gpd.read_file(gpkg_path, layer=layer).to_crs(epsg=4326)
-
-    print(f"      Columns       : {gdf.columns.tolist()}")
-    print(f"      Total features: {len(gdf)}")
-
-    if id_col:
-        if id_col not in gdf.columns:
-            sys.exit(f"[ERROR] Column '{id_col}' not found. Available: {gdf.columns.tolist()}")
-        matched = id_col
-    else:
-        matched = next((c for c in gdf.columns if c.lower() == "id"), None)
-        if matched is None:
-            non_geom = [c for c in gdf.columns if c.lower() != "geometry"]
-            if not non_geom:
-                sys.exit("[ERROR] No usable id column found.")
-            matched = non_geom[0]
-            print(f"      [INFO] No 'id' column - using '{matched}'.")
-
-    print(f"      Using column  : '{matched}'")
-    gdf = gdf.rename(columns={matched: "id"})
-    gdf["id"] = gdf["id"].apply(normalise_id)
-    print(f"      Sample ids    : {gdf['id'].head(5).tolist()}")
+    print(f"  Raw features : {len(gdf)}")
     return gdf
 
 
-def load_downstream_gdf(gpkg_dir: str, feature_id: str):
-    path = os.path.join(gpkg_dir, f"{feature_id}_downstream_path.gpkg")
-    if not os.path.exists(path):
-        return None
-    try:
-        return gpd.read_file(path).to_crs(epsg=4326)
-    except Exception as e:
-        print(f"[WARN] Could not read {path}: {e}")
-        return None
+def scan_storage_dir(storage_dir: str) -> dict[str, str]:
+    """Return {gww_id_stripped: filepath} for all Storage_*_apigen.csv files."""
+    result = {}
+    if not os.path.isdir(storage_dir):
+        print(f"  [WARN] Storage dir not found: {storage_dir}")
+        return result
+    for fname in os.listdir(storage_dir):
+        if not fname.startswith("Storage_") or not fname.endswith("_apigen.csv"):
+            continue
+        mid = fname[len("Storage_"):-len("_apigen.csv")]
+        key = mid.lstrip("0") or "0"
+        result[key] = os.path.join(storage_dir, fname)
+    print(f"  Storage files found: {len(result)}")
+    return result
 
 
-# Columns expected in the runoff CSVs (Date is the index)
+def load_csv_lookup(csv_path: str, label: str) -> dict:
+    """Return {norm_id: pd.Series} for each CSV row."""
+    if not os.path.exists(csv_path):
+        print(f"  [WARN] {label} CSV not found: {csv_path}")
+        return {}
+    df = pd.read_csv(csv_path)
+    if "id" not in df.columns:
+        print(f"  [WARN] No 'id' column in {csv_path}")
+        return {}
+    df["_id"] = df["id"].apply(norm_id)
+    for col in ("lat", "lng"):
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+    return {row["_id"]: row for _, row in df.iterrows() if row["_id"]}
+
+
+CSV_EXTRA = ["country", "Basin", "Areal_Impact (%)"]
+
+def _col_key(col: str) -> str:
+    return col.replace("(","").replace(")","").replace("%","").replace(" ","_").rstrip("_")
+
+
+def load_downstream(dirs: list[str], fid: str) -> gpd.GeoDataFrame | None:
+    for d in dirs:
+        path = os.path.join(d, f"{fid}_downstream_path.gpkg")
+        if os.path.exists(path):
+            try:
+                return gpd.read_file(path).to_crs(epsg=4326)
+            except Exception as e:
+                print(f"  [WARN] {path}: {e}")
+    return None
+
+
 RUNOFF_METRICS = ["Surface", "Sub_Surface", "Precip"]
 
-def load_runoff_series(runoff_dir: str, feature_id: str):
-    path = os.path.join(runoff_dir, f"GDWID_{feature_id}.txt")
-    if not os.path.exists(path):
-        return None
+def load_runoff(dirs: list[str], fid: str) -> dict | None:
+    for d in dirs:
+        path = os.path.join(d, f"GDWID_{fid}.txt")
+        if not os.path.exists(path):
+            continue
+        try:
+            df = pd.read_csv(path)
+        except Exception as e:
+            print(f"  [WARN] {path}: {e}")
+            continue
+        if "Date" not in df.columns:
+            continue
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+        df = df.dropna(subset=["Date"]).sort_values("Date")
+        out = {"dates": df["Date"].dt.strftime("%Y-%m").tolist()}
+        for col in RUNOFF_METRICS:
+            out[col] = (
+                [None if pd.isna(v) else float(f"{v:.6g}") for v in df[col]]
+                if col in df.columns else []
+            )
+        return out
+    return None
+
+
+def load_storage(filepath: str) -> dict | None:
     try:
-        df = pd.read_csv(path)
+        df = pd.read_csv(filepath)
     except Exception as e:
-        print(f"[WARN] Could not read {path}: {e}")
+        print(f"  [WARN] {filepath}: {e}")
         return None
-
-    if "Date" not in df.columns:
-        print(f"[WARN] {path} missing 'Date' column")
+    date_col = next((c for c in df.columns if c.lower() == "date"), None)
+    if date_col is None:
         return None
-
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df = df.dropna(subset=["Date"]).sort_values("Date")
-    dates = df["Date"].dt.strftime("%Y-%m").tolist()
-
-    out = {"dates": dates}
-    for col in RUNOFF_METRICS:
-        if col in df.columns:
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+    df = df.dropna(subset=[date_col]).sort_values(date_col)
+    out = {"dates": df[date_col].dt.strftime("%Y-%m").tolist()}
+    for col in df.columns:
+        if col == date_col:
+            continue
+        if pd.api.types.is_numeric_dtype(df[col]):
             out[col] = [None if pd.isna(v) else float(f"{v:.6g}") for v in df[col]]
-        else:
-            out[col] = []
     return out
 
 
-# ---------------------------------------------------------------------------
-# Per-type processor
-# ---------------------------------------------------------------------------
-
-def process_features(kind, csv_path, downstream_dir, runoff_dir,
-                     watershed_index, out_subdir, coords_filename,
-                     geojson_dir, line_simplify):
-    print(f"\n[Processing {kind}s]")
-    if not os.path.exists(csv_path):
-        print(f"  [SKIP] CSV not found: {csv_path}")
-        # Write empty list so the front-end always finds the file
-        coords_path = os.path.join(geojson_dir, coords_filename)
-        with open(coords_path, "w") as f:
-            f.write("[]")
-        print(f"  Wrote empty {coords_path}")
-        return 0
-
-    print(f"  Loading {kind} CSV ...")
-    features_df = load_features_csv(csv_path)
-    print(f"  {len(features_df)} {kind}s found.")
-
-    # Coordinate JSON
-    coords_path = os.path.join(geojson_dir, coords_filename)
-    with open(coords_path, "w", encoding="utf-8") as f:
-        json.dump(features_df.to_dict(orient="records"), f, separators=(",", ":"))
-    print(f"  Coordinates -> {coords_path}  ({os.path.getsize(coords_path)/1024:.1f} KB)")
-
-    # ID overlap check (against shared watershed gpkg)
-    feat_ids = set(features_df["id"])
-    overlap = feat_ids & set(watershed_index.keys())
-    print(f"  Watershed match: {len(overlap)} / {len(feat_ids)}")
-
-    # Per-feature GeoJSON + time series
-    ws_written = ds_written = ds_missing = ts_written = ts_missing = 0
-    ws_bytes   = ds_bytes   = ts_bytes   = 0
-
-    for rid in features_df["id"]:
-        # Watershed
-        if rid in watershed_index:
-            ws_path = os.path.join(out_subdir, f"watershed_{rid}.geojson")
-            watershed_index[rid].to_file(ws_path, driver="GeoJSON")
-            ws_bytes += os.path.getsize(ws_path)
-            ws_written += 1
-
-        # Downstream
-        ds_gdf = load_downstream_gdf(downstream_dir, rid)
-        if ds_gdf is not None:
-            if line_simplify > 0:
-                ds_gdf = ds_gdf.copy()
-                ds_gdf["geometry"] = ds_gdf["geometry"].simplify(
-                    line_simplify, preserve_topology=True
-                )
-            ds_path = os.path.join(out_subdir, f"downstream_{rid}.geojson")
-            ds_gdf.to_file(ds_path, driver="GeoJSON")
-            ds_bytes += os.path.getsize(ds_path)
-            ds_written += 1
-        else:
-            ds_missing += 1
-
-        # Time series (runoff)
-        ts_series = load_runoff_series(runoff_dir, rid)
-        if ts_series is not None:
-            ts_path = os.path.join(out_subdir, f"timeseries_{rid}.json")
-            with open(ts_path, "w", encoding="utf-8") as f:
-                json.dump(ts_series, f, separators=(",", ":"))
-            ts_bytes += os.path.getsize(ts_path)
-            ts_written += 1
-        else:
-            ts_missing += 1
-
-    total_mb = (ws_bytes + ds_bytes + ts_bytes) / (1024 * 1024)
-    print(f"  {kind.capitalize()} watershed : {ws_written} files")
-    print(f"  {kind.capitalize()} downstream: {ds_written} files  [{ds_missing} missing]")
-    print(f"  {kind.capitalize()} timeseries: {ts_written} files  [{ts_missing} missing]")
-    print(f"  {kind.capitalize()} total     : {total_mb:.1f} MB  -> {out_subdir}/")
-    return total_mb
+def geom_to_feature(geom, fid: str) -> dict:
+    return {
+        "type": "FeatureCollection",
+        "features": [{"type": "Feature",
+                      "geometry": geom.__geo_interface__,
+                      "properties": {"id": fid}}]
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -228,53 +204,210 @@ def main():
     args = parse_args()
 
     res_dir = os.path.join(args.geojson_dir, "reservoir")
-    bar_dir = os.path.join(args.geojson_dir, "barrier")
     os.makedirs(res_dir, exist_ok=True)
-    os.makedirs(bar_dir, exist_ok=True)
-
-    print(f"Output structure:")
-    print(f"  {args.geojson_dir}/reservoir.json  <- reservoir coordinates")
-    print(f"  {args.geojson_dir}/barrier.json    <- barrier coordinates")
-    print(f"  {res_dir}/                          <- per-reservoir GeoJSON + timeseries")
-    print(f"  {bar_dir}/                          <- per-barrier GeoJSON + timeseries")
+    print(f"Output:")
+    print(f"  {args.geojson_dir}/reservoir.json")
+    print(f"  {res_dir}/")
     if args.line_simplify > 0:
-        print(f"Downstream lines simplified at tolerance={args.line_simplify} degrees")
+        print(f"  Downstream simplification: {args.line_simplify} deg")
 
-    # Shared watershed layer (loaded once, used for both reservoirs and barriers)
-    print("\n[Loading watershed polygons]")
-    if not os.path.exists(args.watersheds):
-        sys.exit(f"[ERROR] Watersheds GPKG not found: {args.watersheds}")
-    watershed_gdf = load_watersheds(args.watersheds, args.watershed_layer, args.watershed_id_col)
-    watershed_index = {rid: grp for rid, grp in watershed_gdf.groupby("id")}
+    # ------------------------------------------------------------------
+    # Step 1 — Scan storage directory (authoritative list of GWW ids)
+    # ------------------------------------------------------------------
+    print(f"\n[1] Scanning storage directory: {args.storage_dir}")
+    storage_index = scan_storage_dir(args.storage_dir)  # {gww_id: filepath}
 
-    # Reservoirs
-    res_mb = process_features(
-        kind="reservoir",
-        csv_path=args.reservoirs_csv,
-        downstream_dir=args.reservoirs_downstream_dir,
-        runoff_dir=args.runoff_reservoir_dir,
-        watershed_index=watershed_index,
-        out_subdir=res_dir,
-        coords_filename="reservoir.json",
-        geojson_dir=args.geojson_dir,
-        line_simplify=args.line_simplify,
-    )
+    # ------------------------------------------------------------------
+    # Step 2 — Load geopackage (all rows, no filtering yet)
+    # ------------------------------------------------------------------
+    print(f"\n[2] Loading geopackage: {args.gpkg}")
+    if not os.path.exists(args.gpkg):
+        sys.exit(f"[ERROR] GeoPackage not found: {args.gpkg}")
+    gdf = load_gpkg(args.gpkg, args.gpkg_layer)
 
-    # Barriers
-    bar_mb = process_features(
-        kind="barrier",
-        csv_path=args.barriers_csv,
-        downstream_dir=args.barriers_downstream_dir,
-        runoff_dir=args.runoff_barrier_dir,
-        watershed_index=watershed_index,
-        out_subdir=bar_dir,
-        coords_filename="barrier.json",
-        geojson_dir=args.geojson_dir,
-        line_simplify=args.line_simplify,
-    )
+    # Build GWW_reservoir_id → gpkg row lookup
+    # For duplicate GWW ids, prefer the row with a valid GDW_ID
+    gww_to_row: dict[str, pd.Series] = {}
+    for _, row in gdf.iterrows():
+        val = str(row.get("GWW_reservoir_id", "")).strip()
+        if val in ("NO_MATCH", "", "nan"):
+            continue
+        gww = val.lstrip("0") or "0"
+        existing = gww_to_row.get(gww)
+        # Prefer row with non-null GDW_ID
+        if existing is None:
+            gww_to_row[gww] = row
+        elif pd.isna(existing["GDW_ID"]) and pd.notna(row["GDW_ID"]):
+            gww_to_row[gww] = row
 
-    print(f"\n  Grand total: {(res_mb + bar_mb):.1f} MB")
-    print(f"  Output: {os.path.abspath(args.geojson_dir)}/\n")
+    print(f"  Unique GWW ids in gpkg: {len(gww_to_row)}")
+
+    # ------------------------------------------------------------------
+    # Step 3 — Load metadata CSVs
+    # ------------------------------------------------------------------
+    print(f"\n[3] Loading metadata CSVs")
+    res_lookup = load_csv_lookup(args.reservoirs_csv, "Reservoir")
+    bar_lookup = load_csv_lookup(args.barriers_csv,   "Barrier")
+    print(f"  Reservoir CSV: {len(res_lookup)} rows")
+    print(f"  Barrier CSV  : {len(bar_lookup)} rows")
+
+    # ------------------------------------------------------------------
+    # Step 4 — Build coordinate records
+    # ------------------------------------------------------------------
+    print(f"\n[4] Building coordinate records")
+    coord_records = []
+    src_counts = {"gdw_id": 0, "bar_id": 0, "skipped": 0}
+
+    for gww_id in sorted(storage_index.keys(), key=lambda x: int(x)):
+        gpkg_row = gww_to_row.get(gww_id)
+        if gpkg_row is None:
+            print(f"  [WARN] GWW {gww_id} not found in geopackage — skipping")
+            src_counts["skipped"] += 1
+            continue
+
+        # Determine canonical feature id
+        gdw = norm_id(gpkg_row.get("GDW_ID"))
+
+        if gdw:
+            # 3a — valid GDW_ID
+            fid = gdw
+            csv_row = res_lookup.get(fid)
+            if csv_row is None:
+                csv_row = bar_lookup.get(fid)
+            id_src = "gdw_id"
+        else:
+            # 3b — null GDW_ID: try GDW_bar_ids
+            bar_ids = parse_bar_ids(gpkg_row.get("GDW_bar_ids"))
+            fid = None
+            csv_row = None
+            for bid in bar_ids:
+                if bid in res_lookup:
+                    fid, csv_row = bid, res_lookup[bid]
+                    break
+                if bid in bar_lookup:
+                    fid, csv_row = bid, bar_lookup[bid]
+                    break
+            if fid is None:
+                print(f"  [WARN] GWW {gww_id}: null GDW_ID, no bar_id found in CSV — skipping")
+                src_counts["skipped"] += 1
+                continue
+            id_src = "bar_id"
+
+        # Coordinates: gpkg first, CSV as fallback
+        lat = gpkg_row.get("LAT_DAM") or gpkg_row.get("LAT_RIV")
+        lng = gpkg_row.get("LONG_DAM") or gpkg_row.get("LONG_RIV")
+        if (not lat or pd.isna(lat) or not lng or pd.isna(lng)) and csv_row is not None:
+            lat = csv_row.get("lat")
+            lng = csv_row.get("lng")
+
+        if pd.isna(lat) or pd.isna(lng):
+            print(f"  [WARN] No coordinates for id={fid} (GWW {gww_id}) — skipping")
+            src_counts["skipped"] += 1
+            continue
+
+        record: dict = {"id": fid, "lat": float(lat), "lng": float(lng)}
+
+        if csv_row is not None:
+            for col in CSV_EXTRA:
+                if col in csv_row.index and not pd.isna(csv_row[col]):
+                    record[_col_key(col)] = csv_row[col]
+
+        # Store gww_id on record so per-feature loop can find storage file
+        record["_gww_id"] = gww_id
+        # Store gpkg geometry reference
+        record["_geom"] = gpkg_row.get("geometry")
+
+        coord_records.append(record)
+        src_counts[id_src] += 1
+
+    print(f"  Via GDW_ID   : {src_counts['gdw_id']}")
+    print(f"  Via bar_id   : {src_counts['bar_id']}")
+    print(f"  Skipped      : {src_counts['skipped']}")
+    print(f"  Total records: {len(coord_records)}")
+
+    # Write reservoir.json (strip internal keys before writing)
+    public_records = [{k: v for k, v in r.items() if not k.startswith("_")}
+                      for r in coord_records]
+    coords_path = os.path.join(args.geojson_dir, "reservoir.json")
+    with open(coords_path, "w", encoding="utf-8") as f:
+        json.dump(public_records, f, separators=(",", ":"))
+    print(f"  Written: {coords_path}  ({os.path.getsize(coords_path)/1024:.1f} KB)")
+
+    # ------------------------------------------------------------------
+    # Step 5-8 — Per-feature files
+    # ------------------------------------------------------------------
+    print(f"\n[5-8] Writing per-feature files → {res_dir}/")
+    downstream_dirs = [args.reservoirs_downstream_dir, args.barriers_downstream_dir]
+    runoff_dirs     = [args.runoff_reservoir_dir, args.runoff_barrier_dir]
+
+    ws_ok = ws_skip = 0
+    ds_ok = ds_miss = 0
+    ro_ok = ro_miss = 0
+    st_ok = st_miss = 0
+    ws_bytes = ds_bytes = ro_bytes = st_bytes = 0
+
+    for record in coord_records:
+        fid    = record["id"]
+        gww_id = record["_gww_id"]
+        geom   = record["_geom"]
+
+        # -- Watershed polygon --
+        if geom is not None and not geom.is_empty:
+            ws_path = os.path.join(res_dir, f"watershed_{fid}.geojson")
+            with open(ws_path, "w", encoding="utf-8") as f:
+                json.dump(geom_to_feature(geom, fid), f, separators=(",", ":"))
+            ws_bytes += os.path.getsize(ws_path)
+            ws_ok += 1
+        else:
+            ws_skip += 1
+
+        # -- Downstream path --
+        ds_gdf = load_downstream(downstream_dirs, fid)
+        if ds_gdf is not None:
+            if args.line_simplify > 0:
+                ds_gdf = ds_gdf.copy()
+                ds_gdf["geometry"] = ds_gdf["geometry"].simplify(
+                    args.line_simplify, preserve_topology=True)
+            ds_path = os.path.join(res_dir, f"downstream_{fid}.geojson")
+            ds_gdf.to_file(ds_path, driver="GeoJSON")
+            ds_bytes += os.path.getsize(ds_path)
+            ds_ok += 1
+        else:
+            ds_miss += 1
+
+        # -- Runoff timeseries --
+        ro = load_runoff(runoff_dirs, fid)
+        if ro is not None:
+            ro_path = os.path.join(res_dir, f"timeseries_{fid}.json")
+            with open(ro_path, "w", encoding="utf-8") as f:
+                json.dump(ro, f, separators=(",", ":"))
+            ro_bytes += os.path.getsize(ro_path)
+            ro_ok += 1
+        else:
+            print(f"  [WARN] No runoff data for id={fid} (GWW {gww_id})")
+            ro_miss += 1
+
+        # -- Storage timeseries (keyed by GWW_reservoir_id) --
+        st = load_storage(storage_index[gww_id])
+        if st is not None:
+            st_path = os.path.join(res_dir, f"storage_{fid}.json")
+            with open(st_path, "w", encoding="utf-8") as f:
+                json.dump(st, f, separators=(",", ":"))
+            st_bytes += os.path.getsize(st_path)
+            st_ok += 1
+        else:
+            st_miss += 1
+
+    total_mb = (ws_bytes + ds_bytes + ro_bytes + st_bytes) / (1024 * 1024)
+    print(f"\n  Summary")
+    print(f"  -------")
+    print(f"  Watershed polygons : {ws_ok} written,  {ws_skip} empty/missing")
+    print(f"  Downstream paths   : {ds_ok} written,  {ds_miss} missing")
+    print(f"  Runoff timeseries  : {ro_ok} written,  {ro_miss} missing")
+    print(f"  Storage timeseries : {st_ok} written,  {st_miss} failed to parse")
+    print(f"  Total output size  : {total_mb:.1f} MB")
+    print(f"  Output directory   : {os.path.abspath(res_dir)}/")
+    print(f"\nDone.\n")
 
 
 if __name__ == "__main__":

@@ -14,19 +14,18 @@
     --surface:    #111827;
     --surface2:   #1a2235;
     --border:     #243048;
-    --accent:     #38bdf8;   /* reservoir — sky blue  */
-    --accent2:    #4ade80;   /* watershed  — green    */
-    --accent3:    #fb923c;   /* downstream — orange   */
-    --barrier:    #ef4444;   /* barrier    — red      */
+    --accent:     #38bdf8;
+    --accent2:    #4ade80;
+    --accent3:    #fb923c;
+    --accent4:    #a78bfa;   /* storage — violet */
     --text:       #e2e8f0;
     --muted:      #64748b;
-    --map-bg:     #0e1520;   /* leaflet container bg  */
+    --map-bg:     #0e1520;
     --tooltip-stroke: #0b0f1a;
     --grid-line:  #243048;
     --shadow-strong: rgba(0,0,0,.6);
     --shadow-med:    rgba(0,0,0,.5);
     --shadow-soft:   rgba(0,0,0,.4);
-
     --panel-w:    400px;
     --panel-min:  260px;
     --panel-max:  640px;
@@ -39,10 +38,10 @@
     --surface:    #ffffff;
     --surface2:   #eef2f7;
     --border:     #d8dee8;
-    --accent:     #0284c7;   /* deeper sky for contrast on white */
-    --accent2:    #16a34a;   /* deeper green */
-    --accent3:    #ea580c;   /* deeper orange */
-    --barrier:    #dc2626;
+    --accent:     #0284c7;
+    --accent2:    #16a34a;
+    --accent3:    #ea580c;
+    --accent4:    #7c3aed;
     --text:       #0f172a;
     --muted:      #64748b;
     --map-bg:     #e5ebf2;
@@ -54,167 +53,53 @@
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    height: 100%;
-    width: 100%;
-  }
-
+  html, body { height: 100%; width: 100%; }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Inter', sans-serif;
     font-weight: 300;
-    height: 100vh;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
+    height: 100vh; height: 100dvh;
+    display: flex; flex-direction: column;
     overflow: hidden;
     transition: background-color .25s ease, color .25s ease;
   }
 
-  /* ══════════════════════════════════════════
-     NAV BAR
-  ══════════════════════════════════════════ */
+  /* ══ NAV ══ */
   nav {
     height: var(--nav-h);
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 28px;
-    flex-shrink: 0;
-    z-index: 1000;
-    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 28px; flex-shrink: 0; z-index: 1000; position: relative;
     transition: background-color .25s ease, border-color .25s ease;
   }
+  .nav-title { position:absolute; left:28px; font-family:'Bitter',serif; font-size:16px; font-weight:700; color:var(--text); letter-spacing:.02em; white-space:nowrap; }
+  .nav-title span { color:var(--accent); }
+  .nav-links { display:flex; align-items:center; gap:4px; }
+  .nav-link { font-family:'Bitter',serif; font-size:12px; font-weight:600; color:var(--muted); padding:7px 18px; border-radius:7px; cursor:pointer; transition:color .15s,background .15s; border:none; background:none; letter-spacing:.06em; text-transform:uppercase; }
+  .nav-link:hover  { color:var(--text);   background:var(--surface2); }
+  .nav-link.active { color:var(--accent); background:rgba(2,132,199,.09); }
+  [data-theme="light"] .nav-link.active { background:rgba(2,132,199,.1); }
+  .nav-right { position:absolute; right:28px; display:flex; align-items:center; gap:10px; }
+  .nav-badge { background:rgba(56,189,248,.1); border:1px solid rgba(56,189,248,.25); color:var(--accent); border-radius:20px; padding:3px 12px; font-family:'Bitter',serif; font-size:11px; font-weight:600; white-space:nowrap; }
+  [data-theme="light"] .nav-badge { background:rgba(2,132,199,.08); border-color:rgba(2,132,199,.3); }
+  #theme-toggle { width:32px; height:32px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:color .15s,border-color .15s,background .15s; flex-shrink:0; }
+  #theme-toggle:hover { color:var(--accent); border-color:var(--accent); }
+  #theme-toggle svg { width:16px; height:16px; display:block; }
+  #theme-toggle .icon-sun  { display:block; }
+  #theme-toggle .icon-moon { display:none; }
+  [data-theme="light"] #theme-toggle .icon-sun  { display:none; }
+  [data-theme="light"] #theme-toggle .icon-moon { display:block; }
+  @media (max-width:900px) { nav{padding:0 12px;} .nav-title{left:12px;font-size:14px;} .nav-right{right:12px;} .nav-badge{display:none;} .nav-link{padding:6px 10px;font-size:11px;} }
+  @media (max-width:560px) { .nav-title span{display:none;} .nav-link{padding:6px 8px;font-size:10px;} }
 
-  .nav-title {
-    position: absolute;
-    left: 28px;
-    font-family: 'Bitter', serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-  }
-  .nav-title span { color: var(--accent); }
-
-  .nav-links {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-  .nav-link {
-    font-family: 'Bitter', serif;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-    padding: 7px 18px;
-    border-radius: 7px;
-    cursor: pointer;
-    transition: color 0.15s, background 0.15s;
-    border: none;
-    background: none;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  .nav-link:hover  { color: var(--text);   background: var(--surface2); }
-  .nav-link.active { color: var(--accent); background: rgba(2,132,199,.09); }
-  [data-theme="light"] .nav-link.active { background: rgba(2,132,199,.1); }
-
-  .nav-right {
-    position: absolute;
-    right: 28px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .nav-badge {
-    background: rgba(56,189,248,.1);
-    border: 1px solid rgba(56,189,248,.25);
-    color: var(--accent);
-    border-radius: 20px;
-    padding: 3px 12px;
-    font-family: 'Bitter', serif;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-  }
-  [data-theme="light"] .nav-badge {
-    background: rgba(2,132,199,.08);
-    border-color: rgba(2,132,199,.3);
-  }
-
-  /* ── Theme toggle button ── */
-  #theme-toggle {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color .15s, border-color .15s, background .15s;
-    flex-shrink: 0;
-  }
-  #theme-toggle:hover {
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-  #theme-toggle svg {
-    width: 16px;
-    height: 16px;
-    display: block;
-  }
-  /* Show sun in dark mode, moon in light mode */
-  #theme-toggle .icon-sun { display: block; }
-  #theme-toggle .icon-moon { display: none; }
-  [data-theme="light"] #theme-toggle .icon-sun  { display: none; }
-  [data-theme="light"] #theme-toggle .icon-moon { display: block; }
-
-  @media (max-width: 900px) {
-    nav { padding: 0 12px; }
-    .nav-title { left: 12px; font-size: 14px; }
-    .nav-right { right: 12px; }
-    .nav-badge { display: none; }
-    .nav-link { padding: 6px 10px; font-size: 11px; letter-spacing: .04em; }
-  }
-  @media (max-width: 560px) {
-    .nav-title span { display: none; }
-    .nav-link { padding: 6px 8px; font-size: 10px; }
-  }
-
-  /* ══════════════════════════════════════════
-     PAGE OVERLAYS
-  ══════════════════════════════════════════ */
-  .page-overlay {
-    position: fixed;
-    inset: var(--nav-h) 0 0 0;
-    background: var(--bg);
-    z-index: 800;
-    display: none;
-    overflow-y: auto;
-    padding: 48px 64px;
-    animation: fadeIn 0.2s ease;
-  }
-  /* Slight transparency tint over body, but readable in both themes */
-  [data-theme="dark"] .page-overlay,
-  :root:not([data-theme="light"]) .page-overlay {
-    background: rgba(11,15,26,.97);
-  }
-  [data-theme="light"] .page-overlay {
-    background: rgba(245,247,251,.98);
-  }
-  @media (max-width: 700px) {
-    .page-overlay { padding: 28px 20px; }
-  }
-  .page-overlay.visible { display: block; }
+  /* ══ PAGE OVERLAYS ══ */
+  .page-overlay { position:fixed; inset:var(--nav-h) 0 0 0; background:var(--bg); z-index:800; display:none; overflow-y:auto; padding:48px 64px; animation:fadeIn .2s ease; }
+  :root:not([data-theme="light"]) .page-overlay { background:rgba(11,15,26,.97); }
+  [data-theme="light"] .page-overlay { background:rgba(245,247,251,.98); }
+  @media (max-width:700px) { .page-overlay{padding:28px 20px;} }
+  .page-overlay.visible { display:block; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
   .page-overlay h2 { font-family:'Bitter',serif; font-size:28px; font-weight:700; color:var(--text); margin-bottom:6px; }
   .page-overlay .lead { font-size:14px; color:var(--muted); margin-bottom:32px; line-height:1.7; max-width:680px; }
@@ -231,291 +116,63 @@
   .close-page { position:fixed; top:calc(var(--nav-h) + 16px); right:24px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--muted); padding:6px 14px; font-size:12px; cursor:pointer; z-index:900; }
   .close-page:hover { color:var(--text); }
 
-  /* ── How to Use page ── */
-  .howto-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 18px;
-    max-width: 1800px;
-    margin-bottom: 32px;
-  }
-  .howto-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    transition: border-color .2s, transform .2s;
-  }
-  .howto-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-  .howto-step {
-    font-family: 'Bitter', serif;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: .12em;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
-  .howto-title {
-    font-family: 'Bitter', serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.3;
-  }
-  .howto-body {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-  .howto-body b   { color: var(--text); font-weight: 600; }
-  .howto-body kbd {
-    display: inline-block;
-    font-family: 'Bitter', serif;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text);
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-bottom-width: 2px;
-    border-radius: 4px;
-    padding: 1px 7px;
-    margin: 0 2px;
-  }
-  .howto-icon-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin: 4px 0 2px;
-  }
-  .ic-dot-blue    { width:10px; height:10px; border-radius:50%; background:var(--accent);  box-shadow:0 0 6px var(--accent); display:inline-block; }
-  .ic-dot-red     { width:10px; height:10px; background:var(--barrier); box-shadow:0 0 6px var(--barrier); display:inline-block; transform:rotate(45deg); }
-  .ic-swatch-green{ width:18px; height:5px; border-radius:2px; background:var(--accent2); opacity:.7; display:inline-block; }
-  .ic-swatch-org  { width:18px; height:3px; border-radius:2px; background:var(--accent3); display:inline-block; }
-  .ic-toggle {
-    width: 28px; height: 16px; border-radius: 16px; background: var(--accent);
-    position: relative; display: inline-block;
-  }
-  .ic-toggle::before {
-    content: ''; position: absolute; width: 10px; height: 10px; border-radius: 50%;
-    background: #fff; top: 3px; left: 15px;
-  }
-  .ic-grip {
-    display: inline-block;
-    width: 4px; height: 28px;
-    border-radius: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 6px rgba(56,189,248,.4);
-  }
-  .howto-mini-tag {
-    display: inline-block;
-    font-family: 'Bitter', serif;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .04em;
-    color: var(--muted);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1px 7px;
-    background: var(--bg);
-  }
-  .howto-mini-tag.blue { color: var(--accent);  border-color: rgba(56,189,248,.4); }
-  .howto-mini-tag.red  { color: var(--barrier); border-color: rgba(239,68,68,.4); }
-  .howto-tips {
-    background: rgba(56,189,248,.06);
-    border: 1px solid rgba(56,189,248,.25);
-    border-radius: 12px;
-    padding: 18px 22px;
-    max-width: 1100px;
-    margin-bottom: 32px;
-  }
-  [data-theme="light"] .howto-tips {
-    background: rgba(2,132,199,.06);
-    border-color: rgba(2,132,199,.25);
-  }
-  .howto-tips h3 {
-    font-family: 'Bitter', serif;
-    font-size: 13px;
-    color: var(--accent);
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-bottom: 10px;
-  }
-  .howto-tips ul {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .howto-tips li {
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.5;
-    padding-left: 18px;
-    position: relative;
-  }
-  .howto-tips li::before {
-    content: '›';
-    position: absolute;
-    left: 4px;
-    color: var(--accent);
-    font-weight: 700;
-  }
-  .howto-tips li b { color: var(--text); font-weight: 600; }
+  /* ── How To Use ── */
+  .howto-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; max-width:1800px; margin-bottom:32px; }
+  .howto-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:22px; display:flex; flex-direction:column; gap:10px; transition:border-color .2s,transform .2s; }
+  .howto-card:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .howto-step { font-family:'Bitter',serif; font-size:11px; font-weight:700; letter-spacing:.12em; color:var(--accent); text-transform:uppercase; }
+  .howto-title { font-family:'Bitter',serif; font-size:16px; font-weight:700; color:var(--text); line-height:1.3; }
+  .howto-body { font-size:13px; color:var(--muted); line-height:1.6; }
+  .howto-body b { color:var(--text); font-weight:600; }
+  .howto-body kbd { display:inline-block; font-family:'Bitter',serif; font-size:11px; font-weight:600; color:var(--text); background:var(--bg); border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; padding:1px 7px; margin:0 2px; }
+  .howto-icon-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:4px 0 2px; }
+  .ic-dot-blue { width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 6px var(--accent); display:inline-block; }
+  .ic-swatch-green { width:18px; height:5px; border-radius:2px; background:var(--accent2); opacity:.7; display:inline-block; }
+  .ic-swatch-org { width:18px; height:3px; border-radius:2px; background:var(--accent3); display:inline-block; }
+  .ic-swatch-violet { width:18px; height:3px; border-radius:2px; background:var(--accent4); display:inline-block; }
+  .ic-grip { display:inline-block; width:4px; height:28px; border-radius:2px; background:var(--accent); box-shadow:0 0 6px rgba(56,189,248,.4); }
+  .howto-mini-tag { display:inline-block; font-family:'Bitter',serif; font-size:10px; font-weight:600; letter-spacing:.04em; color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:1px 7px; background:var(--bg); }
+  .howto-mini-tag.blue { color:var(--accent); border-color:rgba(56,189,248,.4); }
+  .howto-mini-tag.violet { color:var(--accent4); border-color:rgba(167,139,250,.4); }
+  .howto-tips { background:rgba(56,189,248,.06); border:1px solid rgba(56,189,248,.25); border-radius:12px; padding:18px 22px; max-width:1100px; margin-bottom:32px; }
+  [data-theme="light"] .howto-tips { background:rgba(2,132,199,.06); border-color:rgba(2,132,199,.25); }
+  .howto-tips h3 { font-family:'Bitter',serif; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
+  .howto-tips ul { list-style:none; padding:0; display:flex; flex-direction:column; gap:6px; }
+  .howto-tips li { font-size:13px; color:var(--muted); line-height:1.5; padding-left:18px; position:relative; }
+  .howto-tips li::before { content:'›'; position:absolute; left:4px; color:var(--accent); font-weight:700; }
+  .howto-tips li b { color:var(--text); font-weight:600; }
 
-  /* ══════════════════════════════════════════
-     WORKSPACE
-  ══════════════════════════════════════════ */
-  .workspace {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-    min-height: 0;
-  }
+  /* ══ WORKSPACE ══ */
+  .workspace { display:flex; flex:1; overflow:hidden; position:relative; min-height:0; }
 
-  /* ══════════════════════════════════════════
-     SIDE PANEL
-  ══════════════════════════════════════════ */
-  #panel {
-    width: var(--panel-w);
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow: hidden;
-    transition: width 0.3s ease, background-color .25s ease, border-color .25s ease;
-    position: relative;
-    min-height: 0;
-  }
-  #panel.collapsed { width: 0 !important; }
-  #panel.resizing { transition: none; }
-
-  .panel-scroll {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  .panel-scroll::-webkit-scrollbar { width: 6px; }
-  .panel-scroll::-webkit-scrollbar-track { background: transparent; }
-  .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  .panel-scroll::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-  #panel-resize {
-    position: absolute;
-    top: 0;
-    right: -6px;
-    width: 12px;
-    height: 100%;
-    cursor: col-resize;
-    z-index: 600;
-    background: transparent;
-    transition: background .15s;
-    touch-action: none;
-  }
-  #panel-resize::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 4px;
-    height: 36px;
-    border-radius: 3px;
-    background: var(--border);
-    opacity: .6;
-    transition: background .15s, opacity .15s;
-    pointer-events: none;
-  }
-  #panel-resize:hover::before,
-  #panel-resize.dragging::before {
-    background: var(--accent);
-    opacity: 1;
-  }
-  #panel-resize:hover,
-  #panel-resize.dragging {
-    background: rgba(56,189,248,.15);
-  }
-  [data-theme="light"] #panel-resize:hover,
-  [data-theme="light"] #panel-resize.dragging {
-    background: rgba(2,132,199,.1);
-  }
-  #panel.collapsed #panel-resize { display: none; }
-
-  .panel-header {
-    padding: 11px 14px 9px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  /* ══ SIDE PANEL ══ */
+  #panel { width:var(--panel-w); background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; flex-shrink:0; overflow:hidden; transition:width .3s ease,background-color .25s ease,border-color .25s ease; position:relative; min-height:0; }
+  #panel.collapsed { width:0 !important; }
+  #panel.resizing  { transition:none; }
+  .panel-scroll { flex:1; overflow-y:auto; overflow-x:hidden; display:flex; flex-direction:column; min-height:0; }
+  .panel-scroll::-webkit-scrollbar { width:6px; }
+  .panel-scroll::-webkit-scrollbar-track { background:transparent; }
+  .panel-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  .panel-scroll::-webkit-scrollbar-thumb:hover { background:var(--muted); }
+  #panel-resize { position:absolute; top:0; right:-6px; width:12px; height:100%; cursor:col-resize; z-index:600; background:transparent; transition:background .15s; touch-action:none; }
+  #panel-resize::before { content:''; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:4px; height:36px; border-radius:3px; background:var(--border); opacity:.6; transition:background .15s,opacity .15s; pointer-events:none; }
+  #panel-resize:hover::before, #panel-resize.dragging::before { background:var(--accent); opacity:1; }
+  #panel-resize:hover, #panel-resize.dragging { background:rgba(56,189,248,.15); }
+  [data-theme="light"] #panel-resize:hover, [data-theme="light"] #panel-resize.dragging { background:rgba(2,132,199,.1); }
+  #panel.collapsed #panel-resize { display:none; }
+  .panel-header { padding:11px 14px 9px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:space-between; }
   .panel-header h2 { font-family:'Bitter',serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
-
-  .feature-checks {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .feature-check-row {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .fcheck {
-    position: relative;
-    width: 15px; height: 15px;
-    flex-shrink: 0;
-  }
+  .feature-checks { padding:10px 14px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .feature-check-row { display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none; }
+  .fcheck { position:relative; width:15px; height:15px; flex-shrink:0; }
   .fcheck input { opacity:0; width:0; height:0; position:absolute; }
-  .fcheck-box {
-    position: absolute; inset: 0;
-    border-radius: 4px;
-    border: 1.5px solid var(--border);
-    background: var(--bg);
-    transition: background .15s, border-color .15s;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .fcheck-box::after {
-    content: '';
-    width: 5px; height: 8px;
-    border: 2px solid #fff;
-    border-top: none; border-left: none;
-    transform: rotate(45deg) translateY(-1px);
-    opacity: 0;
-    transition: opacity .15s;
-  }
-  .fcheck input:checked ~ .fcheck-box::after { opacity: 1; }
-  .fcheck.check-res input:checked ~ .fcheck-box { background: var(--accent);  border-color: var(--accent); }
-  .fcheck.check-bar input:checked ~ .fcheck-box { background: var(--barrier); border-color: var(--barrier); }
-  .fcheck-label {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 11px; color: var(--text); letter-spacing: .04em;
-    flex: 1;
-  }
-  .fcheck-dot     { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
-  .fcheck-diamond { width:7px; height:7px; flex-shrink:0; transform:rotate(45deg); }
-  .fcheck-count {
-    margin-left: auto;
-    font-family: 'Bitter', serif;
-    font-size: 10px; font-weight: 600;
-    color: var(--muted);
-    background: var(--surface2);
-    border-radius: 10px;
-    padding: 0 6px;
-  }
-
+  .fcheck-box { position:absolute; inset:0; border-radius:4px; border:1.5px solid var(--border); background:var(--bg); transition:background .15s,border-color .15s; display:flex; align-items:center; justify-content:center; }
+  .fcheck-box::after { content:''; width:5px; height:8px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(45deg) translateY(-1px); opacity:0; transition:opacity .15s; }
+  .fcheck input:checked ~ .fcheck-box::after { opacity:1; }
+  .fcheck.check-res input:checked ~ .fcheck-box { background:var(--accent); border-color:var(--accent); }
+  .fcheck-label { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--text); letter-spacing:.04em; flex:1; }
+  .fcheck-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .fcheck-count { margin-left:auto; font-family:'Bitter',serif; font-size:10px; font-weight:600; color:var(--muted); background:var(--surface2); border-radius:10px; padding:0 6px; }
   .layer-toggles { padding:9px 14px; border-bottom:1px solid var(--border); flex-shrink:0; display:flex; flex-direction:column; gap:6px; }
   .layer-toggle-row { display:flex; align-items:center; justify-content:space-between; }
   .layer-toggle-label { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--muted); letter-spacing:.04em; }
@@ -526,480 +183,116 @@
   .toggle-slider::before { content:''; position:absolute; width:11px; height:11px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s; }
   .toggle-switch input:checked + .toggle-slider { background:var(--accent); }
   .toggle-switch input:checked + .toggle-slider::before { transform:translateX(13px); }
-
   .search-box { padding:8px 10px; border-bottom:1px solid var(--border); flex-shrink:0; }
-  .search-box input {
-    width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px;
-    padding:5px 10px; font-family:'Inter',sans-serif; font-size:12px; color:var(--text);
-    outline:none; transition:border-color .2s;
-  }
+  .search-box input { width:100%; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-family:'Inter',sans-serif; font-size:12px; color:var(--text); outline:none; transition:border-color .2s; }
   .search-box input:focus { border-color:var(--accent); }
-  .search-hint { font-size:10px; color:var(--muted); margin-top:4px; padding:0 2px; }
-
-  #search-results {
-    flex-shrink: 0;
-    max-height: 200px;
-    overflow-y: auto;
-    border-bottom: 1px solid var(--border);
-    display: none;
-  }
-  #search-results.visible { display: block; }
+  #search-results { flex-shrink:0; max-height:200px; overflow-y:auto; border-bottom:1px solid var(--border); display:none; }
+  #search-results.visible { display:block; }
   #search-results::-webkit-scrollbar { width:3px; }
   #search-results::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
-  .res-item {
-    display:flex; align-items:center; gap:8px;
-    padding:6px 14px; cursor:pointer;
-    transition:background .12s;
-    border-left:2px solid transparent;
-    height:34px;
-  }
+  .res-item { display:flex; align-items:center; gap:8px; padding:6px 14px; cursor:pointer; transition:background .12s; border-left:2px solid transparent; height:34px; }
   .res-item:hover { background:rgba(56,189,248,.06); }
   .res-item.active { background:rgba(56,189,248,.1); border-left-color:var(--accent); }
-  .res-item.barrier-item.active { background:rgba(239,68,68,.1); border-left-color:var(--barrier); }
-  [data-theme="light"] .res-item:hover { background: rgba(2,132,199,.06); }
-  [data-theme="light"] .res-item.active { background: rgba(2,132,199,.1); }
-  [data-theme="light"] .res-item.barrier-item.active { background: rgba(220,38,38,.08); }
-
-  .res-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
-  .res-dot.dot-reservoir { background:var(--accent);  box-shadow:0 0 4px var(--accent); }
-  .res-dot.dot-barrier   { background:var(--barrier); box-shadow:0 0 4px var(--barrier); }
+  [data-theme="light"] .res-item:hover { background:rgba(2,132,199,.06); }
+  [data-theme="light"] .res-item.active { background:rgba(2,132,199,.1); }
+  .res-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; background:var(--accent); box-shadow:0 0 4px var(--accent); }
   .res-id { font-family:'Bitter',serif; font-size:12px; color:var(--accent); flex-shrink:0; min-width:52px; font-weight:600; }
-  .res-item.barrier-item .res-id { color:var(--barrier); }
-  .res-type-tag { font-size:9px; color:var(--muted); border:1px solid var(--border); border-radius:3px; padding:0 4px; margin-left:2px; flex-shrink:0; font-family:'Bitter',serif; }
   .res-coords { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
   #info-card { margin:8px 10px; padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; font-size:12px; color:var(--muted); flex-shrink:0; min-height:72px; transition:border-color .3s; }
   #info-card.active { border-color:var(--accent); }
-  #info-card.barrier-active { border-color:var(--barrier); }
   .ic-title { font-family:'Bitter',serif; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent); margin-bottom:5px; font-weight:600; }
-  .ic-title.barrier-title { color:var(--barrier); }
-  .ic-clear {
-    float: right;
-    font-size: 10px;
-    color: var(--muted);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1px 7px;
-    cursor: pointer;
-    font-family: 'Bitter', serif;
-    font-weight: 600;
-    line-height: 1.6;
-    transition: color .15s, border-color .15s;
-  }
-  .ic-clear:hover { color: var(--accent3); border-color: var(--accent3); }
+  .ic-clear { float:right; font-size:10px; color:var(--muted); background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:1px 7px; cursor:pointer; font-family:'Bitter',serif; font-weight:600; line-height:1.6; transition:color .15s,border-color .15s; }
+  .ic-clear:hover { color:var(--accent3); border-color:var(--accent3); }
   .ic-row { display:flex; justify-content:space-between; margin-bottom:2px; gap:8px; }
   .ic-val { color:var(--text); text-align:right; word-break:break-word; }
   .badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:4px; margin-top:5px; font-family:'Bitter',serif; font-weight:600; }
-  .badge-ws      { background:rgba(74,222,128,.12);   color:var(--accent2); border:1px solid var(--accent2); }
-  .badge-ds      { background:rgba(251,146,60,.12);   color:var(--accent3); border:1px solid var(--accent3); }
-  .badge-none    { background:rgba(100,116,139,.1);   color:var(--muted);   border:1px solid var(--border); }
-  .badge-loading { background:rgba(56,189,248,.1);    color:var(--accent);  border:1px solid var(--accent); animation:pulse 1s infinite; }
+  .badge-ws      { background:rgba(74,222,128,.12);  color:var(--accent2); border:1px solid var(--accent2); }
+  .badge-ds      { background:rgba(251,146,60,.12);  color:var(--accent3); border:1px solid var(--accent3); }
+  .badge-st      { background:rgba(167,139,250,.12); color:var(--accent4); border:1px solid var(--accent4); }
+  .badge-none    { background:rgba(100,116,139,.1);  color:var(--muted);   border:1px solid var(--border); }
+  .badge-loading { background:rgba(56,189,248,.1);   color:var(--accent);  border:1px solid var(--accent); animation:pulse 1s infinite; }
 
-  #ts-card {
-    margin: 0 10px 8px;
-    padding: 10px 12px 8px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    flex-shrink: 0;
-    display: none;
-    transition: border-color .3s;
-  }
-  #ts-card.active         { border-color: var(--accent);  display: block; }
-  #ts-card.barrier-active { border-color: var(--barrier); display: block; }
-  .ts-head {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 6px;
-  }
-  .ts-title {
-    font-family: 'Bitter', serif;
-    font-size: 10px; font-weight: 600;
-    letter-spacing: .08em; text-transform: uppercase;
-    color: var(--accent);
-  }
-  #ts-card.barrier-active .ts-title { color: var(--barrier); }
-  .ts-metric {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
-    color: var(--muted);
-    font-family: 'Bitter', serif; font-size: 9px; font-weight: 600;
-    letter-spacing: .04em;
-    padding: 2px 6px; cursor: pointer;
-    outline: none;
-  }
-  .ts-metric:hover, .ts-metric:focus { color: var(--text); border-color: var(--muted); }
-  .ts-stats {
-    display: flex; justify-content: space-between;
-    font-size: 10px; color: var(--muted);
-    margin-bottom: 4px;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .ts-stat-val {
-    font-family: 'Bitter', serif; font-weight: 600;
-    color: var(--text);
-    margin-left: 3px;
-  }
-  .ts-chart-wrap {
-    position: relative;
-    height: 110px;
-    width: 100%;
-    display: flex;
-    align-items: stretch;
-    gap: 4px;
-  }
-  .ts-yaxis {
-    width: 32px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-end;
-    font-size: 9px;
-    color: var(--muted);
-    font-family: 'Bitter', serif;
-    font-weight: 600;
-    padding: 1px 0;
-    text-align: right;
-  }
-  .ts-yaxis span { line-height: 1; }
-  .ts-plot {
-    flex: 1;
-    position: relative;
-    min-width: 0;
-    border-left: 1px solid var(--border);
-  }
-  .ts-chart-wrap svg { display: block; width: 100%; height: 100%; overflow: visible; }
-  .ts-axis-x {
-    display: flex; justify-content: space-between;
-    font-size: 9px; color: var(--muted);
-    margin-top: 3px;
-    padding-left: 36px;
-    font-family: 'Bitter', serif;
-  }
-  .ts-hover-line  { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 2; opacity: 0; }
-  .ts-hover-dot   { fill: var(--accent); stroke: var(--bg); stroke-width: 1.5; opacity: 0; }
-  #ts-card.barrier-active .ts-hover-dot { fill: var(--barrier); }
+  /* ── Time series card ── */
+  #ts-card { margin:0 10px 8px; padding:10px 12px 8px; background:var(--bg); border:1px solid var(--border); border-radius:8px; flex-shrink:0; display:none; transition:border-color .3s; }
+  #ts-card.active { border-color:var(--accent); display:block; }
+  .ts-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .ts-title { font-family:'Bitter',serif; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+  .ts-metric { background:var(--bg); border:1px solid var(--border); border-radius:5px; color:var(--muted); font-family:'Bitter',serif; font-size:9px; font-weight:600; letter-spacing:.04em; padding:2px 6px; cursor:pointer; outline:none; max-width:130px; }
+  .ts-metric:hover,.ts-metric:focus { color:var(--text); border-color:var(--muted); }
+  .ts-stats { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); margin-bottom:4px; flex-wrap:wrap; gap:6px; }
+  .ts-stat-val { font-family:'Bitter',serif; font-weight:600; color:var(--text); margin-left:3px; }
+  .ts-chart-wrap { position:relative; height:110px; width:100%; display:flex; align-items:stretch; gap:4px; }
+  .ts-yaxis { width:32px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end; font-size:9px; color:var(--muted); font-family:'Bitter',serif; font-weight:600; padding:1px 0; text-align:right; }
+  .ts-yaxis span { line-height:1; }
+  .ts-plot { flex:1; position:relative; min-width:0; border-left:1px solid var(--border); }
+  .ts-chart-wrap svg { display:block; width:100%; height:100%; overflow:visible; }
+  .ts-axis-x { display:flex; justify-content:space-between; font-size:9px; color:var(--muted); margin-top:3px; padding-left:36px; font-family:'Bitter',serif; }
+  .ts-hover-line  { stroke:var(--muted); stroke-width:1; stroke-dasharray:2 2; opacity:0; }
+  .ts-hover-dot   { fill:var(--accent); stroke:var(--bg); stroke-width:1.5; opacity:0; }
+  .ts-expand { background:var(--bg); border:1px solid var(--border); border-radius:5px; color:var(--muted); font-family:'Bitter',serif; font-size:9px; font-weight:600; letter-spacing:.04em; padding:2px 6px; cursor:pointer; outline:none; margin-left:4px; transition:color .15s,border-color .15s; }
+  .ts-expand:hover,.ts-expand:focus { color:var(--text); border-color:var(--muted); }
+  .ts-head-right { display:flex; align-items:center; gap:4px; }
+  .ts-tooltip { position:absolute; background:var(--surface2); border:1px solid var(--border); border-radius:5px; padding:5px 9px; text-align:center; color:var(--text); pointer-events:none; white-space:nowrap; transform:translate(-50%,calc(-100% - 10px)); opacity:0; transition:opacity .12s; font-family:'Bitter',serif; box-shadow:0 2px 8px var(--shadow-soft); }
 
-  .ts-expand {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    color: var(--muted);
-    font-family: 'Bitter', serif;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: .04em;
-    padding: 2px 6px;
-    cursor: pointer;
-    outline: none;
-    margin-left: 4px;
-    transition: color .15s, border-color .15s;
-  }
-  .ts-expand:hover, .ts-expand:focus { color: var(--text); border-color: var(--muted); }
-  .ts-head-right { display: flex; align-items: center; gap: 4px; }
+  /* ── Storage section divider in metric select ── */
+  .ts-metric optgroup { font-style:normal; }
 
-  #ts-modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(11, 15, 26, 0.75);
-    backdrop-filter: blur(4px);
-    z-index: 2000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    animation: fadeIn 0.18s ease;
-  }
-  [data-theme="light"] #ts-modal {
-    background: rgba(245,247,251,.78);
-  }
-  #ts-modal.visible { display: flex; }
-  .ts-modal-box {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: 100%;
-    max-width: 1000px;
-    max-height: calc(100dvh - 48px);
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px var(--shadow-strong);
-    overflow: hidden;
-  }
-  .ts-modal-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .ts-modal-title {
-    font-family: 'Bitter', serif;
-    font-size: 14px; font-weight: 700;
-    letter-spacing: .04em;
-    color: var(--accent);
-  }
-  #ts-modal.barrier .ts-modal-title { color: var(--barrier); }
-  .ts-modal-sub {
-    font-family: 'Inter', sans-serif;
-    font-size: 12px; font-weight: 400;
-    color: var(--muted);
-    margin-top: 4px;
-    letter-spacing: 0;
-    text-transform: none;
-    display: block;
-  }
-  .ts-modal-sub b {
-    color: var(--text);
-    font-weight: 600;
-  }
-  .ts-modal-sub .sub-sep {
-    margin: 0 8px;
-    color: var(--border);
-  }
-  .ts-modal-controls { display: flex; align-items: center; gap: 8px; position: relative; }
-.ts-modal-menu-btn {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--muted);
-  width: 30px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-  font-size: 16px;
-  line-height: 1;
-}
-.ts-modal-menu-btn:hover { color: var(--text); border-color: var(--muted); }
-.ts-modal-menu-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px var(--shadow-med);
-  min-width: 170px;
-  z-index: 10;
-  display: none;
-  overflow: hidden;
-  padding: 4px;
-}
-.ts-modal-menu-dropdown.open { display: block; }
-.ts-modal-menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background .12s;
-}
-.ts-modal-menu-item:hover { background: var(--surface2); }
-.ts-modal-menu-item svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--muted); }
-  .ts-modal-metric {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: 'Bitter', serif;
-    font-size: 11px; font-weight: 600;
-    padding: 4px 8px;
-    cursor: pointer;
-    outline: none;
-  }
-  .ts-modal-metric:hover { border-color: var(--muted); }
-  .ts-modal-close {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--muted);
-    padding: 4px 10px;
-    cursor: pointer;
-    font-family: 'Bitter', serif;
-    font-size: 12px;
-    transition: color .15s, border-color .15s;
-  }
-  .ts-modal-close:hover { color: var(--accent3); border-color: var(--accent3); }
+  /* ── Storage card ── */
+  #st-card { margin:0 10px 8px; padding:10px 12px 8px; background:var(--bg); border:1px solid var(--border); border-radius:8px; flex-shrink:0; display:none; transition:border-color .3s; }
+  #st-card.active { border-color:var(--accent4); display:block; }
+  .st-title { font-family:'Bitter',serif; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent4); margin-bottom:6px; }
+  .st-metric { background:var(--bg); border:1px solid var(--border); border-radius:5px; color:var(--muted); font-family:'Bitter',serif; font-size:9px; font-weight:600; letter-spacing:.04em; padding:2px 6px; cursor:pointer; outline:none; max-width:130px; }
+  .st-metric:hover,.st-metric:focus { color:var(--text); border-color:var(--muted); }
 
-  .ts-modal-body {
-    padding: 18px 22px 22px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-height: 0;
-  }
-  .ts-modal-stats {
-    display: flex;
-    gap: 24px;
-    font-size: 12px;
-    color: var(--muted);
-    flex-wrap: wrap;
-  }
-  .ts-modal-stats .ts-stat-val {
-    font-family: 'Bitter', serif; font-weight: 700;
-    color: var(--text);
-    font-size: 14px;
-    margin-left: 6px;
-  }
-  .ts-modal-chart-wrap {
-    position: relative;
-    height: clamp(260px, 50vh, 480px);
-    display: flex;
-    align-items: stretch;
-    gap: 8px;
-    min-height: 0;
-  }
-  .ts-modal-yaxis {
-    width: 56px;
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: flex-end;
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'Bitter', serif;
-    font-weight: 600;
-    text-align: right;
-    padding: 2px 0;
-  }
-  .ts-modal-yaxis span { line-height: 1; }
-  .ts-modal-plot {
-    flex: 1;
-    position: relative;
-    min-width: 0;
-    border-left: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-  }
-  .ts-modal-plot svg { display: block; width: 100%; height: 100%; overflow: visible; }
-  .ts-modal-axis-x {
-    position: relative;
-    height: 18px;
-    margin-top: 4px;
-    padding-left: 64px;
-    font-family: 'Bitter', serif;
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .ts-modal-axis-x .x-track {
-    position: relative;
-    height: 100%;
-    width: 100%;
-  }
-  .ts-modal-axis-x .x-tick {
-    position: absolute;
-    top: 0;
-    transform: translateX(-50%);
-    white-space: nowrap;
-  }
-  .ts-modal-axis-x .x-tick.x-first { transform: translateX(0); }
-  .ts-modal-axis-x .x-tick.x-last  { transform: translateX(-100%); }
-  @media (max-width: 600px) {
-    .ts-modal-axis-x { font-size: 9px; }
-  }
-  .ts-modal-tooltip {
-    position: absolute;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 12px;
-    text-align: left;
-    color: var(--text);
-    pointer-events: none;
-    white-space: nowrap;
-    transform: translate(-50%, calc(-100% - 12px));
-    opacity: 0;
-    transition: opacity .12s;
-    font-family: 'Inter', sans-serif;
-    box-shadow: 0 4px 14px var(--shadow-med);
-    z-index: 2;
-    min-width: 160px;
-  }
-  .ts-modal-tooltip .tt-date {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'Bitter', serif;
-    font-weight: 600;
-    margin-bottom: 4px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--border);
-  }
-  .ts-modal-tooltip .tt-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-  }
-  .ts-modal-tooltip .tt-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .ts-modal-tooltip .tt-label {
-    color: var(--muted);
-  }
-  .ts-modal-tooltip .tt-val {
-    font-family: 'Bitter', serif;
-    font-weight: 700;
-    color: var(--text);
-    margin-left: auto;
-  }
-
-  @media (max-width: 600px) {
-    #ts-modal { padding: 12px; }
-    .ts-modal-head { padding: 12px 14px; }
-    .ts-modal-body { padding: 14px; }
-    .ts-modal-stats { gap: 14px; }
-  }
-  .ts-tooltip {
-    position: absolute;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 5px 9px;
-    text-align: center;
-    color: var(--text);
-    pointer-events: none;
-    white-space: nowrap;
-    transform: translate(-50%, calc(-100% - 10px));
-    opacity: 0;
-    transition: opacity .12s;
-    font-family: 'Bitter', serif;
-    box-shadow: 0 2px 8px var(--shadow-soft);
-  }
+  /* ── Time series MODAL ── */
+  #ts-modal { position:fixed; inset:0; background:rgba(11,15,26,.75); backdrop-filter:blur(4px); z-index:2000; display:none; align-items:center; justify-content:center; padding:24px; animation:fadeIn .18s ease; }
+  [data-theme="light"] #ts-modal { background:rgba(245,247,251,.78); }
+  #ts-modal.visible { display:flex; }
+  .ts-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; width:100%; max-width:1000px; max-height:calc(100dvh - 48px); display:flex; flex-direction:column; box-shadow:0 20px 60px var(--shadow-strong); overflow:hidden; }
+  .ts-modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); flex-shrink:0; gap:12px; flex-wrap:wrap; }
+  .ts-modal-title { font-family:'Bitter',serif; font-size:14px; font-weight:700; letter-spacing:.04em; color:var(--accent); }
+  .ts-modal-sub { font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:var(--muted); margin-top:4px; letter-spacing:0; text-transform:none; display:block; }
+  .ts-modal-sub b { color:var(--text); font-weight:600; }
+  .ts-modal-sub .sub-sep { margin:0 8px; color:var(--border); }
+  .ts-modal-controls { display:flex; align-items:center; gap:8px; }
+  .ts-modal-metric { background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:'Bitter',serif; font-size:11px; font-weight:600; padding:4px 8px; cursor:pointer; outline:none; }
+  .ts-modal-metric:hover { border-color:var(--muted); }
+  .ts-modal-close { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--muted); padding:4px 10px; cursor:pointer; font-family:'Bitter',serif; font-size:12px; transition:color .15s,border-color .15s; }
+  .ts-modal-close:hover { color:var(--accent3); border-color:var(--accent3); }
+  .ts-modal-body { padding:18px 22px 22px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; min-height:0; }
+  .ts-modal-stats { display:flex; gap:24px; font-size:12px; color:var(--muted); flex-wrap:wrap; }
+  .ts-modal-stats .ts-stat-val { font-family:'Bitter',serif; font-weight:700; color:var(--text); font-size:14px; margin-left:6px; }
+  .ts-modal-chart-wrap { position:relative; height:clamp(260px,50vh,480px); display:flex; align-items:stretch; gap:8px; min-height:0; }
+  .ts-modal-yaxis { width:56px; flex-shrink:0; display:flex; flex-direction:column; justify-content:space-between; align-items:flex-end; font-size:11px; color:var(--muted); font-family:'Bitter',serif; font-weight:600; text-align:right; padding:2px 0; }
+  .ts-modal-yaxis span { line-height:1; }
+  .ts-modal-plot { flex:1; position:relative; min-width:0; border-left:1px solid var(--border); border-bottom:1px solid var(--border); }
+  .ts-modal-plot svg { display:block; width:100%; height:100%; overflow:visible; }
+  .ts-modal-axis-x { position:relative; height:18px; margin-top:4px; padding-left:64px; font-family:'Bitter',serif; font-size:11px; color:var(--muted); }
+  .ts-modal-axis-x .x-track { position:relative; height:100%; width:100%; }
+  .ts-modal-axis-x .x-tick { position:absolute; top:0; transform:translateX(-50%); white-space:nowrap; }
+  .ts-modal-axis-x .x-tick.x-first { transform:translateX(0); }
+  .ts-modal-axis-x .x-tick.x-last  { transform:translateX(-100%); }
+  .ts-modal-tooltip { position:absolute; background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; text-align:left; color:var(--text); pointer-events:none; white-space:nowrap; transform:translate(-50%,calc(-100% - 12px)); opacity:0; transition:opacity .12s; font-family:'Inter',sans-serif; box-shadow:0 4px 14px var(--shadow-med); z-index:2; min-width:160px; }
+  .ts-modal-tooltip .tt-date { font-size:11px; color:var(--muted); font-family:'Bitter',serif; font-weight:600; margin-bottom:4px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+  .ts-modal-tooltip .tt-row { display:flex; align-items:center; gap:6px; font-size:12px; }
+  .ts-modal-tooltip .tt-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .ts-modal-tooltip .tt-label { color:var(--muted); }
+  .ts-modal-tooltip .tt-val { font-family:'Bitter',serif; font-weight:700; color:var(--text); margin-left:auto; }
+  @media (max-width:600px) { #ts-modal{padding:12px;} .ts-modal-head{padding:12px 14px;} .ts-modal-body{padding:14px;} .ts-modal-stats{gap:14px;} .ts-modal-axis-x{font-size:9px;} }
 
   #legend { margin:0 10px 10px; padding:9px 12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; font-size:11px; flex-shrink:0; }
   .leg-title { font-family:'Bitter',serif; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; font-weight:600; }
   .leg-row { display:flex; align-items:center; gap:7px; margin-bottom:4px; }
   .leg-swatch { width:20px; height:3px; border-radius:2px; flex-shrink:0; }
   .leg-circle { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .panel-spacer { flex:1; min-height:8px; }
 
-  .panel-spacer { flex: 1; min-height: 8px; }
-
-  /* ══════════════════════════════════════════
-     MAP
-  ══════════════════════════════════════════ */
-  #map { flex:1; z-index:1; min-width: 0; }
-
-  #map-controls { position:absolute; bottom:28px; right:10px; z-index:500; display:flex; flex-direction:column; align-items:flex-end; gap:6px; max-width: calc(100% - 20px); }
+  /* ══ MAP ══ */
+  #map { flex:1; z-index:1; min-width:0; }
+  #map-controls { position:absolute; bottom:28px; right:10px; z-index:500; display:flex; flex-direction:column; align-items:flex-end; gap:6px; max-width:calc(100% - 20px); }
   #map-control-toggle { background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:5px 11px; font-family:'Bitter',serif; font-size:11px; font-weight:600; color:var(--muted); cursor:pointer; letter-spacing:.05em; text-transform:uppercase; transition:color .15s,border-color .15s; white-space:nowrap; }
   #map-control-toggle:hover, #map-control-toggle.open { color:var(--accent); border-color:var(--accent); }
-  #map-control-panel { background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:12px 14px; width:214px; max-width: 100%; display:none; flex-direction:column; gap:12px; box-shadow:0 8px 24px var(--shadow-med); }
+  #map-control-panel { background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:12px 14px; width:214px; max-width:100%; display:none; flex-direction:column; gap:12px; box-shadow:0 8px 24px var(--shadow-med); }
   #map-control-panel.open { display:flex; }
   .mc-section-title { font-family:'Bitter',serif; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
   .basemap-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
@@ -1014,77 +307,31 @@
   input[type=range].op-slider { flex:1; -webkit-appearance:none; height:3px; border-radius:2px; background:var(--border); outline:none; cursor:pointer; }
   input[type=range].op-slider::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--accent); border:2px solid var(--surface); box-shadow:0 0 4px var(--accent); }
   input[type=range].op-slider::-moz-range-thumb { width:12px; height:12px; border-radius:50%; background:var(--accent); border:2px solid var(--surface); }
-
-  /* Borders section in the Layers panel */
   .borders-row { display:flex; align-items:center; gap:7px; }
   .borders-label { font-size:10px; color:var(--muted); white-space:nowrap; min-width:66px; }
-  .borders-val { font-family:'Bitter',serif; font-size:10px; font-weight:600; color:var(--muted-accent, var(--muted)); min-width:28px; text-align:right; }
-  .borders-row.active .borders-val { color: #94a3b8; }
-  [data-theme="light"] .borders-row.active .borders-val { color: #475569; }
-
-  .leaflet-container { background: var(--map-bg); }
+  .borders-val { font-family:'Bitter',serif; font-size:10px; font-weight:600; color:var(--muted); min-width:28px; text-align:right; }
+  .borders-row.active .borders-val { color:#94a3b8; }
+  [data-theme="light"] .borders-row.active .borders-val { color:#475569; }
+  .leaflet-container { background:var(--map-bg); }
   .leaflet-control-zoom a { background:var(--surface)!important; color:var(--text)!important; border-color:var(--border)!important; font-size:14px!important; }
   .leaflet-control-zoom a:hover { background:var(--surface2)!important; }
   .leaflet-popup-content-wrapper { background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px var(--shadow-strong); font-family:'Inter',sans-serif; font-size:12px; }
   .leaflet-popup-tip { background:var(--surface); }
   .leaflet-popup-close-button { color:var(--muted)!important; }
-  /* Tile attribution control */
-  .leaflet-control-attribution {
-    background: var(--surface) !important;
-    color: var(--muted) !important;
-    border: 1px solid var(--border);
-  }
-  .leaflet-control-attribution a { color: var(--accent) !important; }
-
+  .leaflet-control-attribution { background:var(--surface)!important; color:var(--muted)!important; border:1px solid var(--border); }
+  .leaflet-control-attribution a { color:var(--accent)!important; }
   #spinner { position:fixed; bottom:16px; right:16px; background:var(--surface); border:1px solid var(--accent); border-radius:8px; padding:6px 14px; font-family:'Bitter',serif; font-size:12px; color:var(--accent); display:none; z-index:9999; animation:pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-
-  #toggle-panel {
-    position: absolute;
-    left: var(--panel-w);
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 500;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: none;
-    border-radius: 0 5px 5px 0;
-    width: 16px;
-    height: 44px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--muted);
-    font-size: 10px;
-    transition: left .3s, color .2s, background-color .25s, border-color .25s;
-  }
-  #toggle-panel:hover { color: var(--accent); }
-  #toggle-panel.collapsed { left: 0; }
-  .resizing #toggle-panel { transition: color .2s; }
-
-  @media (max-width: 768px) {
-    :root { --panel-w: 88vw; --panel-max: 95vw; }
-    #panel {
-      position: absolute;
-      top: 0; left: 0; bottom: 0;
-      z-index: 700;
-      box-shadow: 4px 0 20px var(--shadow-strong);
-      max-width: 95vw;
-    }
-    #toggle-panel {
-      left: var(--panel-w);
-      max-left: 95vw;
-    }
-    #panel-resize {
-      width: 20px;
-      right: -10px;
-    }
-    #panel-resize::before {
-      width: 5px;
-      height: 44px;
-      opacity: .8;
-    }
+  #toggle-panel { position:absolute; left:var(--panel-w); top:50%; transform:translateY(-50%); z-index:500; background:var(--surface); border:1px solid var(--border); border-left:none; border-radius:0 5px 5px 0; width:16px; height:44px; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:10px; transition:left .3s,color .2s,background-color .25s,border-color .25s; }
+  #toggle-panel:hover { color:var(--accent); }
+  #toggle-panel.collapsed { left:0; }
+  .resizing #toggle-panel { transition:color .2s; }
+  @media (max-width:768px) {
+    :root { --panel-w:88vw; --panel-max:95vw; }
+    #panel { position:absolute; top:0; left:0; bottom:0; z-index:700; box-shadow:4px 0 20px var(--shadow-strong); max-width:95vw; }
+    #toggle-panel { left:var(--panel-w); max-left:95vw; }
+    #panel-resize { width:20px; right:-10px; }
+    #panel-resize::before { width:5px; height:44px; opacity:.8; }
   }
 </style>
 </head>
@@ -1103,15 +350,8 @@
   <div class="nav-right">
     <span class="nav-badge">River &amp; Reservoir Analysis</span>
     <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme">
-      <!-- Sun icon shown in dark mode (click to go light) -->
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="4"/>
-        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
-      </svg>
-      <!-- Moon icon shown in light mode (click to go dark) -->
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-      </svg>
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
   </div>
 </nav>
@@ -1121,11 +361,11 @@
   <button class="close-page" onclick="showPage('map')">✕ Close</button>
   <h2>GBMIM Reservoir Map</h2>
   <div class="divider"></div>
-  <p class="lead">An interactive hydrological atlas of 1,144 reservoirs and barriers across South and Southeast Asia. Explore watershed boundaries and downstream river networks.</p>
+  <p class="lead">An interactive hydrological atlas of 765 reservoirs across South and Southeast Asia. Explore watershed boundaries, downstream river networks, runoff timeseries, and storage data.</p>
   <div class="card-grid">
-    <div class="info-card-page"><div class="card-num">1,144</div><div class="card-label">Reservoirs</div></div>
-    <div class="info-card-page"><div class="card-num">1,144</div><div class="card-label">Watersheds</div></div>
-    <div class="info-card-page"><div class="card-num">1,144</div><div class="card-label">Downstream Paths</div></div>
+    <div class="info-card-page"><div class="card-num">765</div><div class="card-label">Reservoirs</div></div>
+    <div class="info-card-page"><div class="card-num">765</div><div class="card-label">Watersheds</div></div>
+    <div class="info-card-page"><div class="card-num">765</div><div class="card-label">Downstream Paths</div></div>
     <div class="info-card-page"><div class="card-num">10</div><div class="card-label">Countries</div></div>
   </div>
   <p class="lead">New here? See the <a href="javascript:void(0)" onclick="showPage('howto')" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent);">How to Use</a> page for a quick tour of every feature.</p>
@@ -1137,95 +377,68 @@
   <h2>How to Use</h2>
   <div class="divider"></div>
   <p class="lead">A quick tour of the main interactions. Everything happens around the map and the left sidebar.</p>
-
   <div class="howto-grid">
-
     <div class="howto-card">
       <div class="howto-step">Step 1</div>
-      <div class="howto-title">Choose what to show</div>
-      <div class="howto-icon-row">
-        <span class="ic-dot-blue"></span>
-        <span class="howto-mini-tag blue">Reservoirs</span>
-        <span class="ic-dot-red"></span>
-        <span class="howto-mini-tag red">Barriers</span>
-      </div>
-      <div class="howto-body">Use the two checkboxes at the top of the sidebar to toggle <b>Reservoirs</b> (blue circles) and <b>Barriers</b> (red diamonds) on the map. The count next to each label shows how many features are loaded.</div>
+      <div class="howto-title">Find a reservoir by ID</div>
+      <div class="howto-body">Type any part of a numeric ID into the <b>Search</b> field. Matching results appear below — click one to fly to that location and load its data. You can also click any blue marker directly on the map.</div>
     </div>
-
     <div class="howto-card">
       <div class="howto-step">Step 2</div>
-      <div class="howto-title">Find a site by ID</div>
-      <div class="howto-body">Type any part of a numeric ID into the <b>Search</b> field. Matching results appear below the box — click one to fly to that location and load its data. You can also click a marker directly on the map.</div>
-    </div>
-
-    <div class="howto-card">
-      <div class="howto-step">Step 3</div>
       <div class="howto-title">Explore watershed &amp; downstream</div>
       <div class="howto-icon-row">
-        <span class="ic-swatch-green"></span>
-        <span class="howto-mini-tag" style="color:var(--accent2);border-color:rgba(74,222,128,.4)">Watershed</span>
-        <span class="ic-swatch-org"></span>
-        <span class="howto-mini-tag" style="color:var(--accent3);border-color:rgba(251,146,60,.4)">Downstream</span>
+        <span class="ic-swatch-green"></span><span class="howto-mini-tag" style="color:var(--accent2);border-color:rgba(74,222,128,.4)">Watershed</span>
+        <span class="ic-swatch-org"></span><span class="howto-mini-tag" style="color:var(--accent3);border-color:rgba(251,146,60,.4)">Downstream</span>
       </div>
-      <div class="howto-body">When you select a feature, its <b>watershed boundary</b> (green) and <b>downstream river path</b> (orange) are drawn on the map. Toggle either layer with the switches in the sidebar.</div>
+      <div class="howto-body">When you select a reservoir, its <b>watershed boundary</b> (green) and <b>downstream river path</b> (orange) are drawn on the map. Toggle either layer with the switches in the sidebar.</div>
     </div>
-
+    <div class="howto-card">
+      <div class="howto-step">Step 3</div>
+      <div class="howto-title">Read the info card</div>
+      <div class="howto-body">Below the toggles, the info card shows latitude, longitude, country, basin, and areal impact for the selected reservoir. Click <b>✕ Clear</b> to deselect and remove the watershed/downstream layers.</div>
+    </div>
     <div class="howto-card">
       <div class="howto-step">Step 4</div>
-      <div class="howto-title">Read the info card</div>
-      <div class="howto-body">Below the toggles, the info card shows latitude, longitude, country, basin, and areal impact for the selected feature. Click <b>✕ Clear</b> to deselect and remove the watershed/downstream layers.</div>
+      <div class="howto-title">View runoff time series</div>
+      <div class="howto-body">Pick a metric — <b>Surface Runoff</b>, <b>Sub-Surface Runoff</b>, or <b>Precipitation</b> — from the dropdown. Runoff is shown as a line chart; precipitation as vertical bars. Hover for the date and value.</div>
     </div>
-
     <div class="howto-card">
       <div class="howto-step">Step 5</div>
-      <div class="howto-title">View the time series</div>
-      <div class="howto-body">Selected features include monthly time series. Pick a metric — <b>Surface Runoff</b>, <b>Sub-Surface Runoff</b>, or <b>Precipitation</b> — from the dropdown. Runoff is shown as a line; precipitation as vertical bars. Hover for the date and value.</div>
+      <div class="howto-title">View storage time series</div>
+      <div class="howto-icon-row">
+        <span class="ic-swatch-violet"></span><span class="howto-mini-tag violet">Storage</span>
+      </div>
+      <div class="howto-body">Reservoirs with GWW storage data show a separate <b>Storage</b> card (violet border). Select a column from the dropdown to see monthly storage levels.</div>
     </div>
-
     <div class="howto-card">
       <div class="howto-step">Step 6</div>
-      <div class="howto-title">Expand the chart</div>
-      <div class="howto-body">Click <kbd>⛶ Expand</kbd> on the time series card to open a large, fullscreen view with more date ticks and a richer tooltip. Close with the <kbd>✕</kbd> button, the <kbd>Esc</kbd> key, or by clicking outside the box.</div>
+      <div class="howto-title">Expand any chart</div>
+      <div class="howto-body">Click <kbd>⛶ Expand</kbd> on either time series card to open a large fullscreen view with more date ticks and a rich tooltip. Close with <kbd>✕</kbd>, the <kbd>Esc</kbd> key, or by clicking outside the box.</div>
     </div>
-
     <div class="howto-card">
       <div class="howto-step">Step 7</div>
       <div class="howto-title">Switch basemap &amp; opacity</div>
-      <div class="howto-body">The <b>≡ Layers</b> button at the bottom-right of the map opens a panel where you can pick a basemap (Dark, Light, Satellite, Topo, Street, Terrain) and adjust the opacity of the watershed and downstream overlays.</div>
+      <div class="howto-body">The <b>≡ Layers</b> button at the bottom-right opens a panel to pick a basemap (Dark, Light, Satellite, Topo, Street, Terrain) and adjust the opacity of the watershed and downstream overlays.</div>
     </div>
-
     <div class="howto-card">
       <div class="howto-step">Step 8</div>
       <div class="howto-title">Resize the sidebar</div>
-      <div class="howto-icon-row">
-        <span class="ic-grip"></span>
-        <span class="howto-mini-tag">Drag to resize</span>
-      </div>
-      <div class="howto-body">Drag the vertical grip on the right edge of the sidebar to make it wider or narrower. <b>Double-click</b> it to reset to the default width. On small screens the sidebar becomes an overlay drawer.</div>
+      <div class="howto-icon-row"><span class="ic-grip"></span><span class="howto-mini-tag">Drag to resize</span></div>
+      <div class="howto-body">Drag the vertical grip on the right edge to make the sidebar wider or narrower. <b>Double-click</b> it to reset to default width.</div>
     </div>
-
     <div class="howto-card">
       <div class="howto-step">Step 9</div>
-      <div class="howto-title">Collapse the sidebar</div>
-      <div class="howto-body">Click the small <kbd>‹</kbd> tab on the right edge of the sidebar to collapse it for a full-screen map view. Click <kbd>›</kbd> to bring it back.</div>
-    </div>
-
-    <div class="howto-card">
-      <div class="howto-step">Step 10</div>
       <div class="howto-title">Light &amp; dark theme</div>
-      <div class="howto-body">Use the <b>sun / moon</b> button in the top-right of the navigation bar to switch between dark and light themes. The map basemap stays the same, but every panel and chart adapts to your choice.</div>
+      <div class="howto-body">Use the <b>sun / moon</b> button in the top-right of the navbar to switch themes. Every panel and chart adapts automatically.</div>
     </div>
-
   </div>
-
   <div class="howto-tips">
     <h3>Tips</h3>
     <ul>
       <li>Marker <b>tooltips</b> on hover show the ID and coordinates without selecting the feature.</li>
-      <li>Changing the metric in either the small or large time series view <b>syncs both</b>.</li>
-      <li>Selected features stay highlighted on the map (slightly larger and brighter) so you can still see context while the layers load.</li>
-      <li>Time series chart type changes per metric: <b>line</b> for runoff, <b>bars</b> for precipitation.</li>
-      <li>Switching theme also <b>auto-suggests a matching basemap</b> the first time (Dark ↔ Light) — you can override it at any time from the Layers panel.</li>
+      <li>Changing the metric in either the small or large chart view <b>syncs both</b>.</li>
+      <li>Time series chart type changes per metric: <b>line</b> for runoff/storage, <b>bars</b> for precipitation.</li>
+      <li>Switching theme also <b>auto-suggests a matching basemap</b> the first time — you can override it from the Layers panel.</li>
     </ul>
   </div>
 </div>
@@ -1269,7 +482,6 @@
 <!-- ═══════ WORKSPACE ═══════ -->
 <div class="workspace">
   <div id="panel">
-
     <div class="panel-scroll">
 
       <div class="panel-header">
@@ -1279,7 +491,6 @@
       <div class="search-box">
         <input id="search" type="text" placeholder="Search by ID…" oninput="handleSearch()"/>
       </div>
-
       <div id="search-results"></div>
 
       <div class="feature-checks">
@@ -1294,65 +505,40 @@
             <span class="fcheck-count" id="count-reservoir">0</span>
           </span>
         </label>
-        <label class="feature-check-row">
-          <span class="fcheck check-bar">
-            <input type="checkbox" id="chk-barrier" checked onchange="updateMarkerVisibility()"/>
-            <span class="fcheck-box"></span>
-          </span>
-          <span class="fcheck-label">
-            <span class="fcheck-diamond" style="background:var(--barrier);box-shadow:0 0 4px var(--barrier)"></span>
-            Barriers
-            <span class="fcheck-count" id="count-barrier">0</span>
-          </span>
-        </label>
       </div>
 
       <div class="layer-toggles">
         <div class="layer-toggle-row">
-          <div class="layer-toggle-label">
-            <div class="layer-dot" style="background:var(--accent2)"></div>Show Watershed
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-watershed" checked onchange="refreshLayers()"/>
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="layer-toggle-label"><div class="layer-dot" style="background:var(--accent2)"></div>Show Watershed</div>
+          <label class="toggle-switch"><input type="checkbox" id="toggle-watershed" checked onchange="refreshLayers()"/><span class="toggle-slider"></span></label>
         </div>
         <div class="layer-toggle-row">
-          <div class="layer-toggle-label">
-            <div class="layer-dot" style="background:var(--accent3)"></div>Show Downstream
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-downstream" checked onchange="refreshLayers()"/>
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="layer-toggle-label"><div class="layer-dot" style="background:var(--accent3)"></div>Show Downstream</div>
+          <label class="toggle-switch"><input type="checkbox" id="toggle-downstream" checked onchange="refreshLayers()"/><span class="toggle-slider"></span></label>
         </div>
         <div class="layer-toggle-row">
-          <div class="layer-toggle-label">
-            <div class="layer-dot" style="background:#94a3b8"></div>Country Borders
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-borders" checked onchange="updateCountryBorders()"/>
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="layer-toggle-label"><div class="layer-dot" style="background:#94a3b8"></div>Country Borders</div>
+          <label class="toggle-switch"><input type="checkbox" id="toggle-borders" checked onchange="updateCountryBorders()"/><span class="toggle-slider"></span></label>
         </div>
       </div>
 
       <div class="panel-spacer"></div>
 
       <div id="info-card">
-        <div style="color:var(--muted);font-size:11px;padding-top:2px;">Select a feature to view details</div>
+        <div style="color:var(--muted);font-size:11px;padding-top:2px;">Select a reservoir to view details</div>
       </div>
 
+      <!-- Runoff time series -->
       <div id="ts-card">
         <div class="ts-head">
-          <span class="ts-title">Time Series</span>
+          <span class="ts-title">Runoff &amp; Precipitation</span>
           <span class="ts-head-right">
             <select class="ts-metric" id="ts-metric" onchange="renderTimeSeries()">
               <option value="Surface">Surface Runoff</option>
               <option value="Sub_Surface">Sub-Surface Runoff</option>
               <option value="Precip">Precipitation</option>
             </select>
-            <button class="ts-expand" id="ts-expand-btn" onclick="openTimeSeriesModal()" title="Expand chart">⛶ Expand</button>
+            <button class="ts-expand" onclick="openTsModal('runoff')" title="Expand chart">⛶ Expand</button>
           </span>
         </div>
         <div class="ts-stats">
@@ -1362,11 +548,9 @@
         </div>
         <div class="ts-chart-wrap" id="ts-chart-wrap">
           <div class="ts-yaxis" id="ts-yaxis">
-            <span id="ts-y-max">–</span>
-            <span id="ts-y-mid">–</span>
-            <span id="ts-y-min">–</span>
+            <span id="ts-y-max">–</span><span id="ts-y-mid">–</span><span id="ts-y-min">–</span>
           </div>
-          <div class="ts-plot">
+          <div class="ts-plot" id="ts-plot">
             <svg id="ts-svg" viewBox="0 0 280 110" preserveAspectRatio="none"></svg>
             <div class="ts-tooltip" id="ts-tooltip"></div>
           </div>
@@ -1374,34 +558,43 @@
         <div class="ts-axis-x" id="ts-axis-x"><span>–</span><span>–</span></div>
       </div>
 
+      <!-- Storage time series -->
+      <div id="st-card">
+        <div class="ts-head">
+          <span class="st-title">Storage</span>
+          <span class="ts-head-right">
+            <select class="st-metric" id="st-metric" onchange="renderStorageSeries()"></select>
+            <button class="ts-expand" onclick="openTsModal('storage')" title="Expand chart">⛶ Expand</button>
+          </span>
+        </div>
+        <div class="ts-stats">
+          <span>min<span class="ts-stat-val" id="st-min">–</span></span>
+          <span>mean<span class="ts-stat-val" id="st-mean">–</span></span>
+          <span>max<span class="ts-stat-val" id="st-max">–</span></span>
+        </div>
+        <div class="ts-chart-wrap">
+          <div class="ts-yaxis" id="st-yaxis">
+            <span id="st-y-max">–</span><span id="st-y-mid">–</span><span id="st-y-min">–</span>
+          </div>
+          <div class="ts-plot" id="st-plot">
+            <svg id="st-svg" viewBox="0 0 280 110" preserveAspectRatio="none"></svg>
+            <div class="ts-tooltip" id="st-tooltip"></div>
+          </div>
+        </div>
+        <div class="ts-axis-x" id="st-axis-x"><span>–</span><span>–</span></div>
+      </div>
+
       <div id="legend">
         <div class="leg-title">Legend</div>
-        <div class="leg-row">
-          <div class="leg-circle" style="background:var(--accent);box-shadow:0 0 4px var(--accent)"></div>
-          <span>Reservoir</span>
-        </div>
-        <div class="leg-row">
-          <div class="leg-circle" style="background:var(--barrier);box-shadow:0 0 4px var(--barrier)"></div>
-          <span>Barrier</span>
-        </div>
-        <div class="leg-row">
-          <div class="leg-swatch" style="background:var(--accent2);height:8px;border-radius:2px;opacity:.6"></div>
-          <span>Watershed</span>
-        </div>
-        <div class="leg-row">
-          <div class="leg-swatch" style="background:var(--accent3)"></div>
-          <span>Downstream path</span>
-        </div>
-        <div class="leg-row">
-          <div class="leg-swatch" style="background:#94a3b8"></div>
-          <span>Country border</span>
-        </div>
+        <div class="leg-row"><div class="leg-circle" style="background:var(--accent);box-shadow:0 0 4px var(--accent)"></div><span>Reservoir</span></div>
+        <div class="leg-row"><div class="leg-swatch" style="background:var(--accent2);height:8px;border-radius:2px;opacity:.6"></div><span>Watershed</span></div>
+        <div class="leg-row"><div class="leg-swatch" style="background:var(--accent3)"></div><span>Downstream path</span></div>
+        <div class="leg-row"><div class="leg-swatch" style="background:var(--accent4)"></div><span>Storage data</span></div>
+        <div class="leg-row"><div class="leg-swatch" style="background:#94a3b8"></div><span>Country border</span></div>
       </div>
 
     </div><!-- /panel-scroll -->
-
     <div id="panel-resize" title="Drag to resize"></div>
-
   </div><!-- /panel -->
 
   <button id="toggle-panel" onclick="togglePanel()" title="Toggle panel">&#8249;</button>
@@ -1444,7 +637,7 @@
   </div>
 </div><!-- /workspace -->
 
-<!-- ═══════ TIME SERIES MODAL ═══════ -->
+<!-- ═══════ TIME SERIES MODAL (shared for runoff + storage) ═══════ -->
 <div id="ts-modal" onclick="handleModalBackdropClick(event)">
   <div class="ts-modal-box" onclick="event.stopPropagation()">
     <div class="ts-modal-head">
@@ -1453,19 +646,7 @@
         <div class="ts-modal-sub" id="ts-modal-sub"></div>
       </div>
       <div class="ts-modal-controls">
-        <select class="ts-modal-metric" id="ts-modal-metric" onchange="syncMetricFromModal()">
-          <option value="Surface">Surface Runoff</option>
-          <option value="Sub_Surface">Sub-Surface Runoff</option>
-          <option value="Precip">Precipitation</option>
-        </select>
-        <button class="ts-modal-menu-btn" onclick="toggleTsModalMenu(event)" title="More options" aria-label="More options">⋮</button>
-        <!-- To Download Image uncomment this -->
-        <!-- <div class="ts-modal-menu-dropdown" id="ts-modal-menu-dropdown">
-          <button class="ts-modal-menu-item" onclick="downloadTimeSeriesPNG()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download as PNG
-          </button>
-        </div> -->
+        <select class="ts-modal-metric" id="ts-modal-metric" onchange="syncMetricFromModal()"></select>
         <button class="ts-modal-close" onclick="closeTimeSeriesModal()">✕ Close</button>
       </div>
     </div>
@@ -1477,16 +658,14 @@
       </div>
       <div class="ts-modal-chart-wrap">
         <div class="ts-modal-yaxis">
-          <span id="ts-modal-y-max">–</span>
-          <span id="ts-modal-y-mid">–</span>
-          <span id="ts-modal-y-min">–</span>
+          <span id="ts-modal-y-max">–</span><span id="ts-modal-y-mid">–</span><span id="ts-modal-y-min">–</span>
         </div>
         <div class="ts-modal-plot" id="ts-modal-plot">
           <svg id="ts-modal-svg" viewBox="0 0 800 380" preserveAspectRatio="none"></svg>
           <div class="ts-modal-tooltip" id="ts-modal-tooltip"></div>
         </div>
       </div>
-      <div class="ts-modal-axis-x" id="ts-modal-axis-x"><span>–</span><span>–</span></div>
+      <div class="ts-modal-axis-x" id="ts-modal-axis-x"></div>
     </div>
   </div>
 </div>
@@ -1496,95 +675,54 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ─────────────────────────────────────────────────
-//  Data
+//  CSS variable helpers
 // ─────────────────────────────────────────────────
-const GEOJSON_DIR = "geojson";
-var RESERVOIRS = [];
-var BARRIERS   = [];
+var GEOJSON_DIR = "geojson";
+var RESERVOIRS  = [];
 
-// Theme-dependent colors are read from CSS variables at runtime so they stay
-// in sync with whatever theme is active.
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
-function getAccent()   { return cssVar('--accent')   || '#38bdf8'; }
-function getAccent2()  { return cssVar('--accent2')  || '#4ade80'; }
-function getAccent3()  { return cssVar('--accent3')  || '#fb923c'; }
-function getBarrier()  { return cssVar('--barrier')  || '#ef4444'; }
-function getMuted()    { return cssVar('--muted')    || '#64748b'; }
-function getGridLine() { return cssVar('--grid-line')|| '#243048'; }
-function getTooltipStroke() { return cssVar('--tooltip-stroke') || '#0b0f1a'; }
-
-// Barrier fill is derived from --barrier with a fixed alpha; computed lazily.
-function getBarrierFill() {
-  // Use a translucent version of the barrier color regardless of theme
-  return 'rgba(239,68,68,0.12)';
-}
-function getAccentFill() {
-  // Translucent reservoir color
-  return getCurrentTheme() === 'light'
-    ? 'rgba(2,132,199,0.14)'
-    : 'rgba(56,189,248,0.12)';
-}
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function getAccent()  { return cssVar('--accent')  || '#38bdf8'; }
+function getAccent2() { return cssVar('--accent2') || '#4ade80'; }
+function getAccent3() { return cssVar('--accent3') || '#fb923c'; }
+function getAccent4() { return cssVar('--accent4') || '#a78bfa'; }
+function getMuted()   { return cssVar('--muted')   || '#64748b'; }
+function getGridLine(){ return cssVar('--grid-line')|| '#243048'; }
+function getTooltipStroke(){ return cssVar('--tooltip-stroke')||'#0b0f1a'; }
+function getAccentFill(){ return getCurrentTheme()==='light'?'rgba(2,132,199,0.14)':'rgba(56,189,248,0.12)'; }
+function getAccent4Fill(){ return getCurrentTheme()==='light'?'rgba(124,58,237,0.12)':'rgba(167,139,250,0.12)'; }
 
 // ─────────────────────────────────────────────────
-//  Theme handling
+//  Theme
 // ─────────────────────────────────────────────────
-function getCurrentTheme() {
-  return document.body.getAttribute('data-theme') || 'dark';
-}
+function getCurrentTheme(){ return document.body.getAttribute('data-theme')||'dark'; }
 
 function applyTheme(theme) {
   document.body.setAttribute('data-theme', theme);
-  // Also set it on <html> so [data-theme] selectors at :root level work nicely
   document.documentElement.setAttribute('data-theme', theme);
-
-  // Swap basemap to the matching default if the user hasn't picked one manually
   if (!userPickedBasemap && currentTileLayer) {
-    var preferred = (theme === 'light') ? 'light' : 'dark';
-    var bm = BASEMAPS.find(function(b){ return b.id === preferred; });
-    if (bm) setBasemap(bm, /*userInitiated=*/false);
+    var bm = BASEMAPS.find(function(b){ return b.id===(theme==='light'?'light':'dark'); });
+    if (bm) setBasemap(bm, false);
   }
-
-  // Repaint markers (selected ones get a theme-appropriate accent color)
   refreshAllMarkerIcons();
-
-  // Repaint overlays (watershed/downstream/charts) so colors track the theme
-  if (watershedLayer)  watershedLayer.setStyle({ color: getAccent2(), fillColor: getAccent2() });
-  if (downstreamLayer) downstreamLayer.setStyle({ color: getAccent3() });
-  if (downstreamLayer) {
-    downstreamLayer.eachLayer(function(l){
-      if (l.setStyle) l.setStyle({ color: getAccent3(), fillColor: getAccent3() });
-    });
-  }
-  // Country borders: swap to theme-appropriate grey
-  if (countryBordersLayer) countryBordersLayer.setStyle({ color: getBorderColor() });
-  // Re-render any time series so the inline SVG color values pick up new accents
-  if (tsData && activeId) {
-    renderTimeSeries();
-    if (document.getElementById('ts-modal').classList.contains('visible')) {
-      renderTimeSeriesModal();
-    }
-  }
+  if (watershedLayer)  watershedLayer.setStyle({ color:getAccent2(), fillColor:getAccent2() });
+  if (downstreamLayer) downstreamLayer.setStyle({ color:getAccent3() });
+  if (countryBordersLayer) countryBordersLayer.setStyle({ color:getBorderColor() });
+  if (tsData  && activeId) { renderTimeSeries(); }
+  if (stData  && activeId) { renderStorageSeries(); }
+  if (document.getElementById('ts-modal').classList.contains('visible')) renderTimeSeriesModal();
 }
-
-function toggleTheme() {
-  applyTheme(getCurrentTheme() === 'light' ? 'dark' : 'light');
-}
+function toggleTheme(){ applyTheme(getCurrentTheme()==='light'?'dark':'light'); }
 
 // ─────────────────────────────────────────────────
 //  Nav
 // ─────────────────────────────────────────────────
 function showPage(name) {
   ['home','howto','details','contributors'].forEach(function(p){
-    document.getElementById('page-'+p).classList.toggle('visible', p===name);
+    document.getElementById('page-'+p).classList.toggle('visible',p===name);
   });
   document.querySelectorAll('.nav-link').forEach(function(el){
-    var label = el.textContent.toLowerCase().trim();
-    el.classList.toggle('active',
-      label === name ||
-      (name === 'howto' && label === 'how to use') ||
-      (name === 'map'   && label === 'map'));
+    var label=el.textContent.toLowerCase().trim();
+    el.classList.toggle('active',label===name||(name==='howto'&&label==='how to use')||(name==='map'&&label==='map'));
   });
   if (name==='map') setTimeout(function(){ map.invalidateSize(); },50);
 }
@@ -1593,26 +731,21 @@ function showPage(name) {
 //  Map + Basemaps
 // ─────────────────────────────────────────────────
 var map = L.map('map',{zoomControl:true,preferCanvas:true});
-
 var BASEMAPS = [
-  { id:'dark',      label:'Dark',      color:'#1a2130', url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',      attr:'&copy; OpenStreetMap &copy; CARTO',         opts:{subdomains:'abcd',maxZoom:19} },
-  { id:'light',     label:'Light',     color:'#f0ede8', url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',     attr:'&copy; OpenStreetMap &copy; CARTO',         opts:{subdomains:'abcd',maxZoom:19} },
-  { id:'satellite', label:'Satellite', color:'#1a2f1a', url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr:'&copy; Esri', opts:{maxZoom:19} },
-  { id:'topo',      label:'Topo',      color:'#cdd8b3', url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                   attr:'&copy; OpenTopoMap',                        opts:{maxZoom:17} },
-  { id:'osm',       label:'Street',    color:'#b8d0e8', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',                     attr:'&copy; OpenStreetMap',                      opts:{maxZoom:19} },
-  { id:'terrain',   label:'Terrain',   color:'#d4c5a9', url:'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png',attr:'&copy; Stadia Maps &copy; Stamen &copy; OSM',opts:{maxZoom:18} }
+  {id:'dark',      label:'Dark',      color:'#1a2130', url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',       attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
+  {id:'light',     label:'Light',     color:'#f0ede8', url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',      attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
+  {id:'satellite', label:'Satellite', color:'#1a2f1a', url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr:'&copy; Esri', opts:{maxZoom:19}},
+  {id:'topo',      label:'Topo',      color:'#cdd8b3', url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                    attr:'&copy; OpenTopoMap',                         opts:{maxZoom:17}},
+  {id:'osm',       label:'Street',    color:'#b8d0e8', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',                      attr:'&copy; OpenStreetMap',                       opts:{maxZoom:19}},
+  {id:'terrain',   label:'Terrain',   color:'#d4c5a9', url:'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png', attr:'&copy; Stadia &copy; Stamen &copy; OSM',     opts:{maxZoom:18}}
 ];
-
 var currentTileLayer = null;
-var userPickedBasemap = false;   // set to true once the user clicks a basemap thumb
-
+var userPickedBasemap = false;
 function setBasemap(bm, userInitiated) {
   if (currentTileLayer) map.removeLayer(currentTileLayer);
   currentTileLayer = L.tileLayer(bm.url, Object.assign({attribution:bm.attr},bm.opts)).addTo(map);
   currentTileLayer.bringToBack();
-  document.querySelectorAll('.basemap-thumb').forEach(function(el){
-    el.classList.toggle('active', el.dataset.id===bm.id);
-  });
+  document.querySelectorAll('.basemap-thumb').forEach(function(el){ el.classList.toggle('active',el.dataset.id===bm.id); });
   if (userInitiated) userPickedBasemap = true;
 }
 (function(){
@@ -1622,20 +755,16 @@ function setBasemap(bm, userInitiated) {
     div.className = 'basemap-thumb'+(bm.id==='dark'?' active':'');
     div.dataset.id = bm.id;
     div.innerHTML = '<div class="bm-preview" style="background:'+bm.color+'"></div><span class="bm-label">'+bm.label+'</span>';
-    div.addEventListener('click',function(){ setBasemap(bm, /*userInitiated=*/true); });
+    div.addEventListener('click',function(){ setBasemap(bm,true); });
     grid.appendChild(div);
   });
 })();
-setBasemap(BASEMAPS[0], /*userInitiated=*/false);
-
-// Kick off the country borders overlay (toggle defaults to on)
+setBasemap(BASEMAPS[0], false);
 loadCountryBorders();
-
 function toggleMapControls(){
   var p=document.getElementById('map-control-panel'),b=document.getElementById('map-control-toggle');
   var o=p.classList.toggle('open'); b.classList.toggle('open',o);
 }
-
 var wsOpacity=0.15, dsOpacity=0.85;
 function updateOpacity(type,val){
   var f=val/100;
@@ -1645,211 +774,111 @@ function updateOpacity(type,val){
 }
 
 // ─────────────────────────────────────────────────
-//  Country borders overlay (Natural Earth 50m vectors)
+//  Country borders
 // ─────────────────────────────────────────────────
-var countryBordersLayer = null;
-var bordersData = null;
-var borderWeight  = 1.5;
-var borderOpacity = 0.7;
-
-// Theme-aware border color: light grey on dark, slate on light
-function getBorderColor() {
-  return getCurrentTheme() === 'light' ? '#475569' : '#94a3b8';
-}
-
-function loadCountryBorders() {
-  // Load once, then reuse
+var countryBordersLayer=null, bordersData=null;
+var borderWeight=1.5, borderOpacity=0.7;
+function getBorderColor(){ return getCurrentTheme()==='light'?'#475569':'#94a3b8'; }
+function loadCountryBorders(){
   if (bordersData) { applyCountryBorders(); return; }
   fetch('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_admin_0_countries.geojson')
-    .then(function(r) { return r.ok ? r.json() : null; })
-    .then(function(data) {
-      if (!data) return;
-      bordersData = data;
-      applyCountryBorders();
-    })
-    .catch(function(e) {
-      console.warn('Country borders failed to load:', e);
-    });
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){ if(!d)return; bordersData=d; applyCountryBorders(); })
+    .catch(function(){});
 }
-
-function applyCountryBorders() {
+function applyCountryBorders(){
   if (!bordersData) return;
-  if (countryBordersLayer) { map.removeLayer(countryBordersLayer); countryBordersLayer = null; }
-  countryBordersLayer = L.geoJSON(bordersData, {
-    style: {
-      color:   getBorderColor(),
-      weight:  borderWeight,
-      opacity: borderOpacity,
-      fill:    false
-    },
-    interactive: false   // pass clicks through to markers underneath
-  }).addTo(map);
-  // Sit above the basemap, below the selection overlays (watershed/downstream)
-  if (countryBordersLayer.bringToBack) countryBordersLayer.bringToBack();
-  // …then nudge the basemap further back so borders are visible above it
+  if (countryBordersLayer){ map.removeLayer(countryBordersLayer); countryBordersLayer=null; }
+  countryBordersLayer = L.geoJSON(bordersData,{style:{color:getBorderColor(),weight:borderWeight,opacity:borderOpacity,fill:false},interactive:false}).addTo(map);
+  countryBordersLayer.bringToBack();
   if (currentTileLayer && currentTileLayer.bringToBack) currentTileLayer.bringToBack();
 }
-
-function updateCountryBorders() {
-  var on = document.getElementById('toggle-borders').checked;
-  // Reflect enabled/disabled visual state on the thickness/opacity rows
-  document.querySelectorAll('.borders-row').forEach(function(r) {
-    r.classList.toggle('active', on);
-  });
-  if (on) {
-    loadCountryBorders();
-  } else if (countryBordersLayer) {
-    map.removeLayer(countryBordersLayer);
-    countryBordersLayer = null;
-  }
+function updateCountryBorders(){
+  var on=document.getElementById('toggle-borders').checked;
+  document.querySelectorAll('.borders-row').forEach(function(r){ r.classList.toggle('active',on); });
+  if (on) loadCountryBorders();
+  else if (countryBordersLayer){ map.removeLayer(countryBordersLayer); countryBordersLayer=null; }
 }
-
-function updateBorderWeight(val) {
-  // Slider range 0-50 maps to weight 0.0-5.0 (0.1 steps)
-  borderWeight = val / 10;
-  document.getElementById('border-weight-val').textContent = borderWeight.toFixed(1);
-  if (countryBordersLayer) countryBordersLayer.setStyle({ weight: borderWeight });
-}
-
-function updateBorderOpacity(val) {
-  borderOpacity = val / 100;
-  document.getElementById('border-opacity-val').textContent = val + '%';
-  if (countryBordersLayer) countryBordersLayer.setStyle({ opacity: borderOpacity });
-}
+function updateBorderWeight(val){ borderWeight=val/10; document.getElementById('border-weight-val').textContent=borderWeight.toFixed(1); if(countryBordersLayer) countryBordersLayer.setStyle({weight:borderWeight}); }
+function updateBorderOpacity(val){ borderOpacity=val/100; document.getElementById('border-opacity-val').textContent=val+'%'; if(countryBordersLayer) countryBordersLayer.setStyle({opacity:borderOpacity}); }
 
 // ─────────────────────────────────────────────────
-//  Marker factories
+//  Markers
 // ─────────────────────────────────────────────────
-function makeIcon(type, active) {
-  var accent  = getAccent();
-  var accent2 = getAccent2();
-  var barrier = getBarrier();
-  var c   = active ? (type==='barrier' ? barrier : accent2)
-                   : (type==='barrier' ? barrier : accent);
-  var sz  = active ? 9 : 6;
-  var op  = active ? 1 : 0.75;
-  var hit = active ? 22 : 18;
-  var visible = type==='barrier'
-    ? '<div style="width:'+sz+'px;height:'+sz+'px;background:'+c+';transform:rotate(45deg);box-shadow:0 0 5px '+c+';opacity:'+op+'"></div>'
-    : '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+c+';box-shadow:0 0 5px '+c+';opacity:'+op+'"></div>';
-  var html =
-    '<div style="width:'+hit+'px;height:'+hit+'px;display:flex;align-items:center;justify-content:center;cursor:pointer;">'+
-      visible+
-    '</div>';
-  return L.divIcon({ className:'', html:html, iconSize:[hit,hit], iconAnchor:[hit/2,hit/2] });
+function makeIcon(active){
+  var c  = active ? getAccent2() : getAccent();
+  var sz = active ? 9 : 6;
+  var op = active ? 1 : 0.75;
+  var hit= active ? 22 : 18;
+  return L.divIcon({className:'',
+    html:'<div style="width:'+hit+'px;height:'+hit+'px;display:flex;align-items:center;justify-content:center;cursor:pointer;">'+
+         '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+c+';box-shadow:0 0 5px '+c+';opacity:'+op+'"></div></div>',
+    iconSize:[hit,hit], iconAnchor:[hit/2,hit/2]});
 }
 
-function refreshAllMarkerIcons() {
-  Object.keys(markerMap).forEach(function(key){
-    var entry = markerMap[key];
-    var isActive = (activeId !== null) &&
-                   (entry.type === activeType) &&
-                   (entry.data.id === activeId);
-    entry.marker.setIcon(makeIcon(entry.type, isActive));
-  });
-}
-
-// ─────────────────────────────────────────────────
-//  Place all markers
-// ─────────────────────────────────────────────────
 var markerMap = {};
 var activeId  = null;
-var activeType = null;
-var wsData = null, dsData = null;
-var watershedLayer = null, downstreamLayer = null;
+var wsData=null, dsData=null, stData=null;
+var watershedLayer=null, downstreamLayer=null;
 
-function addMarkers(data, type) {
+function refreshAllMarkerIcons(){
+  Object.keys(markerMap).forEach(function(id){
+    markerMap[id].setIcon(makeIcon(id===activeId));
+  });
+}
+
+function addMarkers(data){
   data.forEach(function(r){
-    var key = type + '_' + r.id;
-    if (markerMap[key]) return;
-    var m = L.marker([r.lat,r.lng],{icon:makeIcon(type,false)})
-      .bindTooltip((type==='barrier'?'Barrier':'Reservoir')+' #'+r.id+'<br/>'+r.lat.toFixed(4)+', '+r.lng.toFixed(4),
-        {direction:'top',offset:[0,-6]})
-      .on('click',function(){ selectFeature(r.id, type); });
-    markerMap[key] = { marker:m, type:type, data:r };
+    if (markerMap[r.id]) return;
+    var m = L.marker([r.lat,r.lng],{icon:makeIcon(false)})
+      .bindTooltip('Reservoir #'+r.id+'<br/>'+r.lat.toFixed(4)+', '+r.lng.toFixed(4),{direction:'top',offset:[0,-6]})
+      .on('click',function(){ selectFeature(r.id); });
+    markerMap[r.id] = m;
   });
 }
 
-function updateCounts() {
-  document.getElementById('count-reservoir').textContent = RESERVOIRS.length;
-  document.getElementById('count-barrier').textContent   = BARRIERS.length;
-}
+function updateCounts(){ document.getElementById('count-reservoir').textContent=RESERVOIRS.length; }
 
-function updateMarkerVisibility() {
-  var showRes = document.getElementById('chk-reservoir').checked;
-  var showBar = document.getElementById('chk-barrier').checked;
-  Object.keys(markerMap).forEach(function(key) {
-    var entry = markerMap[key];
-    var show  = (entry.type==='reservoir' && showRes) ||
-                (entry.type==='barrier'   && showBar);
-    if (show) { if (!map.hasLayer(entry.marker)) entry.marker.addTo(map); }
-    else      { if (map.hasLayer(entry.marker))  map.removeLayer(entry.marker); }
+function updateMarkerVisibility(){
+  var show=document.getElementById('chk-reservoir').checked;
+  Object.keys(markerMap).forEach(function(id){
+    var m=markerMap[id];
+    if (show){ if(!map.hasLayer(m)) m.addTo(map); }
+    else      { if(map.hasLayer(m))  map.removeLayer(m); }
   });
 }
 
 // ─────────────────────────────────────────────────
-// Load coordinates
+//  Load coordinates
 // ─────────────────────────────────────────────────
-Promise.all([
-  fetch(GEOJSON_DIR + '/reservoir.json').then(function(r){ return r.json(); }),
-  fetch(GEOJSON_DIR + '/barrier.json').then(function(r){ return r.json(); })
-]).then(function(results) {
-  RESERVOIRS = results[0] || [];
-  BARRIERS   = results[1] || [];
-  addMarkers(RESERVOIRS, 'reservoir');
-  addMarkers(BARRIERS,   'barrier');
+fetch(GEOJSON_DIR + '/reservoir.json').then(function(r){ return r.json(); }).then(function(data){
+  RESERVOIRS = data || [];
+  addMarkers(RESERVOIRS);
   updateCounts();
   updateMarkerVisibility();
-  var all = RESERVOIRS.concat(BARRIERS);
-  if (all.length > 0) {
-    var lats = all.map(function(r){ return r.lat; });
-    var lngs = all.map(function(r){ return r.lng; });
-    map.fitBounds([
-      [Math.min.apply(null,lats)-0.5, Math.min.apply(null,lngs)-0.5],
-      [Math.max.apply(null,lats)+0.5, Math.max.apply(null,lngs)+0.5]
-    ]);
+  if (RESERVOIRS.length>0){
+    var lats=RESERVOIRS.map(function(r){return r.lat;}), lngs=RESERVOIRS.map(function(r){return r.lng;});
+    map.fitBounds([[Math.min.apply(null,lats)-.5,Math.min.apply(null,lngs)-.5],[Math.max.apply(null,lats)+.5,Math.max.apply(null,lngs)+.5]]);
   }
-}).catch(function(e){
-  console.error('Failed to load coordinate JSON files:', e);
-});
+}).catch(function(e){ console.error('Failed to load reservoir.json:',e); });
 
 // ─────────────────────────────────────────────────
 //  Search
 // ─────────────────────────────────────────────────
-function handleSearch() {
-  var q   = document.getElementById('search').value.toLowerCase().trim();
-  var box = document.getElementById('search-results');
-
-  if (!q) { box.innerHTML=''; box.classList.remove('visible'); return; }
-
-  var sources = [];
-  if (document.getElementById('chk-reservoir').checked) sources.push({data:RESERVOIRS,type:'reservoir'});
-  if (document.getElementById('chk-barrier').checked)   sources.push({data:BARRIERS,  type:'barrier'});
-
-  var results = [];
-  sources.forEach(function(s){
-    s.data.forEach(function(r){
-      if (String(r.id).toLowerCase().includes(q)) results.push({r:r,type:s.type});
-    });
-  });
-
-  box.innerHTML = '';
-  if (results.length===0) {
-    box.innerHTML = '<div style="padding:8px 14px;font-size:11px;color:var(--muted);">No results</div>';
+function handleSearch(){
+  var q=document.getElementById('search').value.toLowerCase().trim();
+  var box=document.getElementById('search-results');
+  if(!q){ box.innerHTML=''; box.classList.remove('visible'); return; }
+  var results=RESERVOIRS.filter(function(r){ return String(r.id).toLowerCase().includes(q); });
+  box.innerHTML='';
+  if(!results.length){
+    box.innerHTML='<div style="padding:8px 14px;font-size:11px;color:var(--muted);">No results</div>';
   } else {
-    results.slice(0,30).forEach(function(item){
-      var div = document.createElement('div');
-      div.className = 'res-item' + (item.type==='barrier'?' barrier-item':'');
-      div.innerHTML =
-        '<div class="res-dot dot-'+(item.type==='barrier'?'barrier':'reservoir')+'"></div>'+
-        '<span class="res-id">#'+item.r.id+'</span>'+
-        '<span class="res-type-tag">'+item.type+'</span>'+
-        '<span class="res-coords">'+item.r.lat.toFixed(4)+', '+item.r.lng.toFixed(4)+'</span>';
-      (function(id,t){ div.addEventListener('click',function(){
-        selectFeature(id,t);
-        document.getElementById('search').value = '#'+id;
-        box.classList.remove('visible');
-      }); })(item.r.id, item.type);
+    results.slice(0,30).forEach(function(r){
+      var div=document.createElement('div');
+      div.className='res-item';
+      div.innerHTML='<div class="res-dot"></div><span class="res-id">#'+r.id+'</span><span class="res-coords">'+r.lat.toFixed(4)+', '+r.lng.toFixed(4)+'</span>';
+      (function(id){ div.addEventListener('click',function(){ selectFeature(id); document.getElementById('search').value='#'+id; box.classList.remove('visible'); }); })(r.id);
       box.appendChild(div);
     });
   }
@@ -1859,800 +888,417 @@ function handleSearch() {
 // ─────────────────────────────────────────────────
 //  GeoJSON fetch
 // ─────────────────────────────────────────────────
-var cache = {};
-function resolveUrl(filename, type) {
-  var subfolder = (type === 'barrier') ? 'barrier' : 'reservoir';
-  if (typeof GEOJSON_DIR === 'string') {
-    return GEOJSON_DIR + '/' + subfolder + '/' + filename;
-  }
-  if (GEOJSON_DIR.mode === 'dropbox') {
-    var key = subfolder + '/' + filename;
-    return GEOJSON_DIR.urls[key] || null;
-  }
-  if (GEOJSON_DIR.mode === 'drive') {
-    var key2 = subfolder + '/' + filename;
-    var fid = (GEOJSON_DIR.urls || {})[key2];
-    if (!fid) return null;
-    return 'https://corsproxy.io/?' + encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fid);
-  }
-  return null;
-}
-
-function fetchGeoJSON(filename, type) {
-  var url = resolveUrl(filename, type);
-  if (!url) return Promise.resolve(null);
+var cache={};
+function fetchGeoJSON(filename){
+  var url = GEOJSON_DIR+'/reservoir/'+filename;
   if (cache[url]) return Promise.resolve(cache[url]);
-  return fetch(url)
-    .then(function(r) { return r.ok ? r.json() : null; })
-    .then(function(d) { if (d) cache[url] = d; return d; })
-    .catch(function() { return null; });
+  return fetch(url).then(function(r){ return r.ok?r.json():null; })
+    .then(function(d){ if(d) cache[url]=d; return d; }).catch(function(){ return null; });
 }
 
 // ─────────────────────────────────────────────────
 //  Draw layers
 // ─────────────────────────────────────────────────
-function drawLayers(ws, ds) {
-  if (watershedLayer)  { map.removeLayer(watershedLayer);  watershedLayer=null; }
-  if (downstreamLayer) { map.removeLayer(downstreamLayer); downstreamLayer=null; }
+function drawLayers(ws,ds){
+  if(watershedLayer){  map.removeLayer(watershedLayer);  watershedLayer=null; }
+  if(downstreamLayer){ map.removeLayer(downstreamLayer); downstreamLayer=null; }
   var showWS=document.getElementById('toggle-watershed').checked;
   var showDS=document.getElementById('toggle-downstream').checked;
-  var hasWS=false, hasDS=false;
-  var a2 = getAccent2();
-  var a3 = getAccent3();
-  if (ws&&showWS) {
-    hasWS=true;
-    watershedLayer=L.geoJSON(ws,{style:{color:a2,weight:1.5,opacity:Math.min(wsOpacity*6,0.9),fillColor:a2,fillOpacity:wsOpacity*0.8}}).addTo(map);
-    map.fitBounds(watershedLayer.getBounds().pad(0.1));
-  }
-  if (ds&&showDS) {
-    hasDS=true;
-    downstreamLayer=L.geoJSON(ds,{
-      style:{color:a3,weight:2,opacity:dsOpacity},
-      pointToLayer:function(f,ll){ return L.circleMarker(ll,{radius:3,color:a3,fillColor:a3,fillOpacity:0.8,weight:1}); }
-    }).addTo(map);
-    if(!hasWS) map.fitBounds(downstreamLayer.getBounds().pad(0.1));
-  }
+  var hasWS=false,hasDS=false;
+  if(ws&&showWS){ hasWS=true; watershedLayer=L.geoJSON(ws,{style:{color:getAccent2(),weight:1.5,opacity:Math.min(wsOpacity*6,.9),fillColor:getAccent2(),fillOpacity:wsOpacity*.8}}).addTo(map); map.fitBounds(watershedLayer.getBounds().pad(.1)); }
+  if(ds&&showDS){ hasDS=true; downstreamLayer=L.geoJSON(ds,{style:{color:getAccent3(),weight:2,opacity:dsOpacity},pointToLayer:function(f,ll){ return L.circleMarker(ll,{radius:3,color:getAccent3(),fillColor:getAccent3(),fillOpacity:.8,weight:1}); }}).addTo(map); if(!hasWS) map.fitBounds(downstreamLayer.getBounds().pad(.1)); }
   return {hasWS:hasWS,hasDS:hasDS};
 }
-
 function refreshLayers(){
   if(!activeId) return;
-  var res=(activeType==='barrier'?BARRIERS:RESERVOIRS).find(function(r){ return r.id===activeId; });
+  var res=RESERVOIRS.find(function(r){ return r.id===activeId; });
   var result=drawLayers(wsData,dsData);
-  updateCard(activeId,activeType,res,result.hasWS,result.hasDS,false);
+  updateCard(activeId,res,result.hasWS,result.hasDS,stData!==null,false);
   if(!result.hasWS&&!result.hasDS&&res) map.flyTo([res.lat,res.lng],11);
 }
 
 // ─────────────────────────────────────────────────
 //  Select feature
 // ─────────────────────────────────────────────────
-function clearSelection() {
+function clearSelection(){
   if (!activeId) return;
-  var key = (activeType||'reservoir') + '_' + activeId;
-  if (markerMap[key]) markerMap[key].marker.setIcon(makeIcon(activeType, false));
-  if (watershedLayer)  { map.removeLayer(watershedLayer);  watershedLayer  = null; }
-  if (downstreamLayer) { map.removeLayer(downstreamLayer); downstreamLayer = null; }
-  activeId = null; activeType = null; wsData = null; dsData = null;
-  var card = document.getElementById('info-card');
-  card.className = '';
-  card.innerHTML = '<div style="color:var(--muted);font-size:11px;padding-top:2px;">Select a feature to view details</div>';
-  hideTimeSeries();
+  if (markerMap[activeId]) markerMap[activeId].setIcon(makeIcon(false));
+  if(watershedLayer){  map.removeLayer(watershedLayer);  watershedLayer=null; }
+  if(downstreamLayer){ map.removeLayer(downstreamLayer); downstreamLayer=null; }
+  activeId=null; wsData=null; dsData=null; tsData=null; stData=null;
+  var card=document.getElementById('info-card');
+  card.className='';
+  card.innerHTML='<div style="color:var(--muted);font-size:11px;padding-top:2px;">Select a reservoir to view details</div>';
+  document.getElementById('ts-card').className='';
+  document.getElementById('st-card').className='';
+  closeTimeSeriesModal();
 }
 
-function selectFeature(id, type) {
-  if (activeId) {
-    var prevKey = (activeType||'reservoir')+'_'+activeId;
-    if (markerMap[prevKey]) markerMap[prevKey].marker.setIcon(makeIcon(activeType,false));
-  }
-
-  activeId   = id;
-  activeType = type;
-  var key = type+'_'+id;
-  if (markerMap[key]) markerMap[key].marker.setIcon(makeIcon(type,true));
-
-  var dataset = type==='barrier' ? BARRIERS : RESERVOIRS;
-  var res = dataset.find(function(r){ return r.id===id; });
-
-  updateCard(id,type,res,null,null,true);
+function selectFeature(id){
+  if(activeId && markerMap[activeId]) markerMap[activeId].setIcon(makeIcon(false));
+  activeId=id;
+  if(markerMap[id]) markerMap[id].setIcon(makeIcon(true));
+  var res=RESERVOIRS.find(function(r){ return r.id===id; });
+  updateCard(id,res,null,null,null,true);
   document.getElementById('spinner').style.display='block';
-
   Promise.all([
-    fetchGeoJSON('watershed_'  + id + '.geojson', type),
-    fetchGeoJSON('downstream_' + id + '.geojson', type)
+    fetchGeoJSON('watershed_'+id+'.geojson'),
+    fetchGeoJSON('downstream_'+id+'.geojson'),
+    fetchGeoJSON('timeseries_'+id+'.json'),
+    fetchGeoJSON('storage_'+id+'.json')
   ]).then(function(results){
-    wsData=results[0]; dsData=results[1];
+    wsData=results[0]; dsData=results[1]; tsData=results[2]; stData=results[3];
     var drawn=drawLayers(wsData,dsData);
     if(!drawn.hasWS&&!drawn.hasDS&&res) map.flyTo([res.lat,res.lng],11);
-    updateCard(id,type,res,drawn.hasWS,drawn.hasDS,false);
-    showTimeSeries(id, type);
+    updateCard(id,res,drawn.hasWS,drawn.hasDS,stData!==null,false);
+    showTimeSeries();
+    showStorageSeries();
     document.getElementById('spinner').style.display='none';
   });
 }
 
-function updateCard(id,type,res,hasWS,hasDS,loading){
+function updateCard(id,res,hasWS,hasDS,hasST,loading){
   var card=document.getElementById('info-card');
-  var isBarrier=type==='barrier';
-  card.className = loading ? 'active' : (isBarrier?'barrier-active':'active');
+  card.className=loading?'active':'active';
   if(loading){
-    card.innerHTML='<div class="ic-title'+(isBarrier?' barrier-title':'')+'">'+(isBarrier?'Barrier':'Reservoir')+' #'+id+'</div>'+
-      '<span class="badge badge-loading">&#8635; Loading…</span>';
+    card.innerHTML='<div class="ic-title">Reservoir #'+id+'</div><span class="badge badge-loading">&#8635; Loading…</span>';
     return;
   }
-
-  function row(label, val, color) {
-    if (val === undefined || val === null || val === '') return '';
-    var style = color ? ' style="color:'+color+'"' : '';
-    return '<div class="ic-row"><span>'+label+'</span><span class="ic-val"'+style+'>'+val+'</span></div>';
+  function row(label,val,color){
+    if(val===undefined||val===null||val==='') return '';
+    return '<div class="ic-row"><span>'+label+'</span><span class="ic-val"'+(color?' style="color:'+color+'"':'')+'>'+val+'</span></div>';
   }
-
-  var basin       = res['Basin']            || res['basin']        || '';
-  var country     = res['country']          || res['Country']      || '';
-  var arealRaw    = res['Areal_Impact (%)'] || res['areal_impact'] || '';
-  var arealVal    = arealRaw ? String(arealRaw).replace(/%$/, '') + '%' : '';
-
+  var basin  =res['Basin']   ||res['basin']  ||'';
+  var country=res['country'] ||res['Country']||'';
+  var arealRaw=res['Areal_Impact (%)']||res['Areal_Impact_']||res['areal_impact']||'';
+  var arealVal=arealRaw?String(arealRaw).replace(/%$/,'')+'%':'';
   card.innerHTML=
-    '<div class="ic-title'+(isBarrier?' barrier-title':'')+'">'+
-      (isBarrier?'Barrier':'Reservoir')+' #'+id+
+    '<div class="ic-title">Reservoir #'+id+
       '<button class="ic-clear" onclick="clearSelection()">&#10005; Clear</button>'+
     '</div>'+
     '<div style="margin-top:10px"></div>'+
-    row('Latitude',     res.lat.toFixed(5))+
-    row('Longitude',    res.lng.toFixed(5))+
-    row('Type',         isBarrier?'Barrier':'Reservoir', isBarrier?'var(--barrier)':'var(--accent)')+
-    row('Country',      country)+
-    row('Basin',        basin)+
-    row('Areal Impact', arealVal)+
+    row('Latitude',  res.lat.toFixed(5))+
+    row('Longitude', res.lng.toFixed(5))+
+    row('Country',   country)+
+    row('Basin',     basin)+
+    row('Areal Impact',arealVal)+
     '<div style="margin-top:6px;">'+
       '<span class="badge '+(hasWS?'badge-ws':'badge-none')+'">'+(hasWS?'&#10003; Watershed':'&#10007; No watershed')+'</span> '+
-      '<span class="badge '+(hasDS?'badge-ds':'badge-none')+'">'+(hasDS?'&#10003; Downstream':'&#10007; No path')+'</span>'+
+      '<span class="badge '+(hasDS?'badge-ds':'badge-none')+'">'+(hasDS?'&#10003; Downstream':'&#10007; No path')+'</span> '+
+      (hasST!==null?'<span class="badge '+(hasST?'badge-st':'badge-none')+'">'+(hasST?'&#10003; Storage':'&#10007; No storage')+'</span>':'')+
     '</div>';
 }
 
 // ─────────────────────────────────────────────────
-//  Time series
+//  Runoff time series
 // ─────────────────────────────────────────────────
-var tsData  = null;
-var tsCache = {};
+var tsData=null;
 
-function fetchTimeSeries(id, type) {
-  var key = type + '_' + id;
-  if (tsCache[key]) return Promise.resolve(tsCache[key]);
-  return fetchGeoJSON('timeseries_' + id + '.json', type).then(function(d) {
-    if (d) tsCache[key] = d;
-    return d;
+function showTimeSeries(){
+  var card=document.getElementById('ts-card');
+  if(!tsData){ card.className=''; return; }
+  card.className='active';
+  renderTimeSeries();
+}
+
+function renderTimeSeries(){
+  if(!tsData||!activeId) return;
+  if(document.getElementById('ts-modal').classList.contains('visible')&&currentModalType==='runoff') renderTimeSeriesModal();
+  var metric=document.getElementById('ts-metric').value;
+  renderChart({
+    values: tsData[metric], dates: tsData.dates,
+    svgId:'ts-svg', yaxisId:'ts-yaxis', axisXId:'ts-axis-x',
+    yMaxId:'ts-y-max', yMidId:'ts-y-mid', yMinId:'ts-y-min',
+    minId:'ts-min', meanId:'ts-mean', maxId:'ts-max',
+    tooltipId:'ts-tooltip', plotId:'ts-plot',
+    stroke: getAccent(), fill: getAccentFill(),
+    isPrecip: metric==='Precip',
+    W:280, H:110
   });
 }
 
-function renderTimeSeries() {
-  if (!tsData || !activeId) return;
-  var modalMetric = document.getElementById('ts-modal-metric');
-  if (modalMetric) modalMetric.value = document.getElementById('ts-metric').value;
-  renderTimeSeriesModal();
+// ─────────────────────────────────────────────────
+//  Storage time series
+// ─────────────────────────────────────────────────
+var stData=null;
 
-  var metric = document.getElementById('ts-metric').value;
-  var values = tsData[metric];
-  var dates  = tsData.dates;
-  if (!values || !values.length) { renderTSEmpty(); return; }
+function showStorageSeries(){
+  var card=document.getElementById('st-card');
+  if(!stData){ card.className=''; return; }
+  // Populate metric dropdown from data keys (excluding 'dates')
+  var sel=document.getElementById('st-metric');
+  sel.innerHTML='';
+  Object.keys(stData).forEach(function(k){
+    if(k==='dates') return;
+    var opt=document.createElement('option');
+    opt.value=k; opt.textContent=k.replace(/_/g,' ');
+    sel.appendChild(opt);
+  });
+  card.className='active';
+  renderStorageSeries();
+}
 
-  var clean = values.filter(function(v){ return v !== null && v !== undefined && !isNaN(v); });
-  if (!clean.length) { renderTSEmpty(); return; }
+function renderStorageSeries(){
+  if(!stData) return;
+  if(document.getElementById('ts-modal').classList.contains('visible')&&currentModalType==='storage') renderTimeSeriesModal();
+  var metric=document.getElementById('st-metric').value;
+  renderChart({
+    values: stData[metric], dates: stData.dates,
+    svgId:'st-svg', yaxisId:'st-yaxis', axisXId:'st-axis-x',
+    yMaxId:'st-y-max', yMidId:'st-y-mid', yMinId:'st-y-min',
+    minId:'st-min', meanId:'st-mean', maxId:'st-max',
+    tooltipId:'st-tooltip', plotId:'st-plot',
+    stroke: getAccent4(), fill: getAccent4Fill(),
+    isPrecip: true,
+    W:280, H:110
+  });
+}
 
-  var min = Math.min.apply(null, clean);
-  var max = Math.max.apply(null, clean);
-  var sum = clean.reduce(function(a,b){ return a+b; }, 0);
-  var mean = sum / clean.length;
+// ─────────────────────────────────────────────────
+//  Generic chart renderer (inline small chart)
+// ─────────────────────────────────────────────────
+function formatDp(absMax){
+  if(absMax>=100)  return 0;
+  if(absMax>=10)   return 1;
+  if(absMax>=1)    return 2;
+  if(absMax>=0.1)  return 3;
+  return 4;
+}
 
-  var absMax = Math.max(Math.abs(min), Math.abs(max));
-  var dp;
-  if      (absMax >= 100) dp = 0;
-  else if (absMax >= 10)  dp = 1;
-  else if (absMax >= 1)   dp = 2;
-  else if (absMax >= 0.1) dp = 3;
-  else                    dp = 4;
-
-  document.getElementById('ts-min').textContent  = min.toFixed(dp);
-  document.getElementById('ts-mean').textContent = mean.toFixed(dp);
-  document.getElementById('ts-max').textContent  = max.toFixed(dp);
-
-  document.getElementById('ts-y-max').textContent = max.toFixed(dp);
-  document.getElementById('ts-y-mid').textContent = ((max + min) / 2).toFixed(dp);
-  document.getElementById('ts-y-min').textContent = min.toFixed(dp);
-
-  var W = 280, H = 110, pad = 4;
-  var n = values.length;
-  var range = max - min || 1;
-
-  function xAt(i) { return pad + (i / (n - 1)) * (W - 2 * pad); }
-  function yAt(v) { return H - pad - ((v - min) / range) * (H - 2 * pad); }
-
-  var pathD = '';
-  var startNewSeg = true;
-  for (var i = 0; i < n; i++) {
-    var v = values[i];
-    if (v === null || v === undefined || isNaN(v)) { startNewSeg = true; continue; }
-    var x = xAt(i), y = yAt(v);
-    pathD += (startNewSeg ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2) + ' ';
-    startNewSeg = false;
+function renderChart(cfg){
+  var values=cfg.values, dates=cfg.dates;
+  if(!values||!values.length){ renderChartEmpty(cfg); return; }
+  var clean=values.filter(function(v){ return v!==null&&v!==undefined&&!isNaN(v); });
+  if(!clean.length){ renderChartEmpty(cfg); return; }
+  var min=Math.min.apply(null,clean), max=Math.max.apply(null,clean);
+  var mean=clean.reduce(function(a,b){return a+b;},0)/clean.length;
+  var dp=formatDp(Math.max(Math.abs(min),Math.abs(max)));
+  document.getElementById(cfg.minId).textContent  = min.toFixed(dp);
+  document.getElementById(cfg.meanId).textContent = mean.toFixed(dp);
+  document.getElementById(cfg.maxId).textContent  = max.toFixed(dp);
+  document.getElementById(cfg.yMaxId).textContent = max.toFixed(dp);
+  document.getElementById(cfg.yMidId).textContent = ((max+min)/2).toFixed(dp);
+  document.getElementById(cfg.yMinId).textContent = min.toFixed(dp);
+  var W=cfg.W,H=cfg.H,pad=4,n=values.length,range=max-min||1;
+  function xAt(i){ return pad+(i/(n-1))*(W-2*pad); }
+  function yAt(v){ return H-pad-((v-min)/range)*(H-2*pad); }
+  var pathD='', newSeg=true;
+  for(var i=0;i<n;i++){
+    var v=values[i];
+    if(v===null||v===undefined||isNaN(v)){ newSeg=true; continue; }
+    pathD+=(newSeg?'M':'L')+xAt(i).toFixed(2)+' '+yAt(v).toFixed(2)+' '; newSeg=false;
   }
-  var hasNulls = clean.length !== n;
-  var areaD = '';
-  if (!hasNulls) {
-    areaD = pathD + 'L' + xAt(n - 1).toFixed(2) + ' ' + (H - pad) +
-                   ' L' + xAt(0).toFixed(2)     + ' ' + (H - pad) + ' Z';
-  }
-
-  var isBarrier = activeType === 'barrier';
-  var stroke = isBarrier ? getBarrier() : getAccent();
-  var fill   = isBarrier ? getBarrierFill()  : getAccentFill();
-  var isPrecip = (metric === 'Precip');
-
-  var svg = document.getElementById('ts-svg');
-  if (isPrecip) {
-    var base = Math.max(0, min);
-    var baseY = yAt(base);
-    var plotW = W - 2 * pad;
-    var slot  = plotW / n;
-    var bw    = Math.max(0.6, slot * 0.7);
-    var barsHtml = '';
-    for (var bi = 0; bi < n; bi++) {
-      var bv = values[bi];
-      if (bv === null || bv === undefined || isNaN(bv)) continue;
-      var cx = xAt(bi);
-      var by = yAt(bv);
-      var topY = Math.min(by, baseY);
-      var hPx  = Math.abs(by - baseY);
-      if (hPx < 1) hPx = 1;
-      barsHtml +=
-        '<rect x="' + (cx - bw / 2).toFixed(2) + '" y="' + topY.toFixed(2) +
-        '" width="' + bw.toFixed(2) + '" height="' + hPx.toFixed(2) +
-        '" fill="' + stroke + '" />';
+  var hasNulls=clean.length!==n;
+  var areaD='';
+  if(!hasNulls) areaD=pathD+'L'+xAt(n-1).toFixed(2)+' '+(H-pad)+' L'+xAt(0).toFixed(2)+' '+(H-pad)+' Z';
+  var svg=document.getElementById(cfg.svgId);
+  if(cfg.isPrecip){
+    var baseY=yAt(Math.max(0,min)), slot=(W-2*pad)/n, bw=Math.max(.6,slot*.7), bars='';
+    for(var bi=0;bi<n;bi++){
+      var bv=values[bi]; if(bv===null||bv===undefined||isNaN(bv)) continue;
+      var cx=xAt(bi),by=yAt(bv),topY=Math.min(by,baseY),hh=Math.abs(by-baseY); if(hh<1)hh=1;
+      bars+='<rect x="'+(cx-bw/2).toFixed(2)+'" y="'+topY.toFixed(2)+'" width="'+bw.toFixed(2)+'" height="'+hh.toFixed(2)+'" fill="'+cfg.stroke+'"/>';
     }
-    svg.innerHTML =
-      barsHtml +
-      '<line class="ts-hover-line" id="ts-hover-line" x1="0" y1="0" x2="0" y2="' + H + '"/>' +
-      '<circle class="ts-hover-dot"  id="ts-hover-dot"  r="3" cx="0" cy="0"/>';
+    svg.innerHTML=bars+'<line class="ts-hover-line" id="'+cfg.svgId+'-hl" x1="0" y1="0" x2="0" y2="'+H+'"/><circle class="ts-hover-dot" id="'+cfg.svgId+'-hd" r="3" cx="0" cy="0"/>';
   } else {
-    svg.innerHTML =
-      (areaD ? '<path d="' + areaD + '" fill="' + fill + '" stroke="none"/>' : '') +
-      '<path d="' + pathD + '" fill="none" stroke="' + stroke + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>' +
-      '<line class="ts-hover-line" id="ts-hover-line" x1="0" y1="0" x2="0" y2="' + H + '"/>' +
-      '<circle class="ts-hover-dot"  id="ts-hover-dot"  r="3" cx="0" cy="0"/>';
+    svg.innerHTML=(areaD?'<path d="'+areaD+'" fill="'+cfg.fill+'" stroke="none"/>':'')+
+      '<path d="'+pathD+'" fill="none" stroke="'+cfg.stroke+'" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '<line class="ts-hover-line" id="'+cfg.svgId+'-hl" x1="0" y1="0" x2="0" y2="'+H+'"/><circle class="ts-hover-dot" id="'+cfg.svgId+'-hd" r="3" cx="0" cy="0"/>';
   }
-
-  var axis = document.getElementById('ts-axis-x');
-  axis.innerHTML = '<span>' + dates[0] + '</span><span>' + dates[n - 1] + '</span>';
-
-  var wrap = document.getElementById('ts-chart-wrap');
-  var plot = wrap.querySelector('.ts-plot');
-  var tip  = document.getElementById('ts-tooltip');
-  var line = document.getElementById('ts-hover-line');
-  var dot  = document.getElementById('ts-hover-dot');
-
-  plot.onmousemove = function(e) {
-    var rect = plot.getBoundingClientRect();
-    var relX = (e.clientX - rect.left) / rect.width;
-    var idx  = Math.round(relX * (n - 1));
-    if (idx < 0) idx = 0; if (idx > n - 1) idx = n - 1;
-    var v = values[idx];
-    if (v === null || v === undefined || isNaN(v)) {
-      line.style.opacity = 0; dot.style.opacity = 0; tip.style.opacity = 0;
-      return;
-    }
-    var xPx = (xAt(idx) / W) * rect.width;
-    var yPx = (yAt(v)   / H) * rect.height;
-    line.setAttribute('x1', xAt(idx)); line.setAttribute('x2', xAt(idx));
-    line.style.opacity = 1;
-    dot.setAttribute('cx', xAt(idx));  dot.setAttribute('cy', yAt(v));
-    dot.style.opacity = 1;
-    tip.style.left = xPx + 'px';
-    tip.style.top  = yPx + 'px';
-    tip.innerHTML =
-      '<div style="font-size:12px;font-weight:600;color:var(--text);line-height:1.1">' + v.toFixed(dp) + '</div>' +
-      '<div style="font-size:9px;color:var(--muted);line-height:1.3;margin-top:1px">' + dates[idx] + '</div>';
-    tip.style.opacity = 1;
+  document.getElementById(cfg.axisXId).innerHTML='<span>'+dates[0]+'</span><span>'+dates[n-1]+'</span>';
+  var plot=document.getElementById(cfg.plotId), tip=document.getElementById(cfg.tooltipId);
+  var hl=document.getElementById(cfg.svgId+'-hl'), hd=document.getElementById(cfg.svgId+'-hd');
+  plot.onmousemove=function(e){
+    var rect=plot.getBoundingClientRect(), relX=(e.clientX-rect.left)/rect.width;
+    var idx=Math.max(0,Math.min(n-1,Math.round(relX*(n-1))));
+    var v=values[idx]; if(v===null||v===undefined||isNaN(v)){ hl.style.opacity=0;hd.style.opacity=0;tip.style.opacity=0; return; }
+    hl.setAttribute('x1',xAt(idx)); hl.setAttribute('x2',xAt(idx)); hl.style.opacity=1;
+    hd.setAttribute('cx',xAt(idx)); hd.setAttribute('cy',yAt(v));   hd.style.opacity=1;
+    tip.style.left=(xAt(idx)/W*rect.width)+'px'; tip.style.top=(yAt(v)/H*rect.height)+'px';
+    tip.innerHTML='<div style="font-size:12px;font-weight:600;color:var(--text)">'+v.toFixed(dp)+'</div><div style="font-size:9px;color:var(--muted);margin-top:1px">'+dates[idx]+'</div>';
+    tip.style.opacity=1;
   };
-  plot.onmouseleave = function() {
-    line.style.opacity = 0;
-    dot.style.opacity  = 0;
-    tip.style.opacity  = 0;
-  };
-  plot.onmousedown = function() {
-    line.style.opacity = 0;
-    dot.style.opacity  = 0;
-    tip.style.opacity  = 0;
-  };
+  plot.onmouseleave=function(){ hl.style.opacity=0; hd.style.opacity=0; tip.style.opacity=0; };
 }
 
-document.addEventListener('mousedown', function(e) {
-  var plot = document.querySelector('.ts-plot');
-  if (!plot) return;
-  if (plot.contains(e.target)) return;
-  var line = document.getElementById('ts-hover-line');
-  var dot  = document.getElementById('ts-hover-dot');
-  var tip  = document.getElementById('ts-tooltip');
-  if (line) line.style.opacity = 0;
-  if (dot)  dot.style.opacity  = 0;
-  if (tip)  tip.style.opacity  = 0;
-});
-
-function renderTSEmpty() {
-  document.getElementById('ts-min').textContent  = '–';
-  document.getElementById('ts-mean').textContent = '–';
-  document.getElementById('ts-max').textContent  = '–';
-  document.getElementById('ts-y-max').textContent = '–';
-  document.getElementById('ts-y-mid').textContent = '–';
-  document.getElementById('ts-y-min').textContent = '–';
-  document.getElementById('ts-axis-x').innerHTML = '<span>–</span><span>–</span>';
-  document.getElementById('ts-svg').innerHTML =
-    '<text x="140" y="55" text-anchor="middle" fill="'+getMuted()+'" font-family="Bitter,serif" font-size="11" font-style="italic">No time series data</text>';
-}
-
-function showTimeSeries(id, type) {
-  var card = document.getElementById('ts-card');
-  card.className = type === 'barrier' ? 'barrier-active' : 'active';
-
-  document.getElementById('ts-min').textContent  = '…';
-  document.getElementById('ts-mean').textContent = '…';
-  document.getElementById('ts-max').textContent  = '…';
-  document.getElementById('ts-y-max').textContent = '…';
-  document.getElementById('ts-y-mid').textContent = '…';
-  document.getElementById('ts-y-min').textContent = '…';
-  document.getElementById('ts-svg').innerHTML =
-    '<text x="140" y="55" text-anchor="middle" fill="'+getMuted()+'" font-family="Bitter,serif" font-size="11" font-style="italic">Loading…</text>';
-  document.getElementById('ts-axis-x').innerHTML = '<span>–</span><span>–</span>';
-
-  var thisId = id, thisType = type;
-  fetchTimeSeries(id, type).then(function(data) {
-    if (activeId !== thisId || activeType !== thisType) return;
-    if (!data) { tsData = null; renderTSEmpty(); return; }
-    tsData = data;
-    renderTimeSeries();
-  });
-}
-
-function hideTimeSeries() {
-  document.getElementById('ts-card').className = '';
-  tsData = null;
-  closeTimeSeriesModal();
+function renderChartEmpty(cfg){
+  ['minId','meanId','maxId','yMaxId','yMidId','yMinId'].forEach(function(k){ document.getElementById(cfg[k]).textContent='–'; });
+  document.getElementById(cfg.axisXId).innerHTML='<span>–</span><span>–</span>';
+  document.getElementById(cfg.svgId).innerHTML='<text x="140" y="55" text-anchor="middle" fill="'+getMuted()+'" font-family="Bitter,serif" font-size="11" font-style="italic">No data</text>';
 }
 
 // ─────────────────────────────────────────────────
 //  Time series MODAL
 // ─────────────────────────────────────────────────
-function openTimeSeriesModal() {
-  if (!tsData || !activeId) return;
-  var modal = document.getElementById('ts-modal');
-  document.getElementById('ts-modal-metric').value =
-    document.getElementById('ts-metric').value;
-  var isBarrier = activeType === 'barrier';
-  modal.classList.toggle('barrier', isBarrier);
-  document.getElementById('ts-modal-title').textContent =
-    (isBarrier ? 'Barrier' : 'Reservoir') + ' #' + activeId;
-  var dataset = isBarrier ? BARRIERS : RESERVOIRS;
-  var res = dataset.find(function(r){ return r.id === activeId; });
-  var subEl = document.getElementById('ts-modal-sub');
-  if (res) {
-    var country = res['country'] || res['Country'] || '';
-    var basin   = res['Basin']   || res['basin']   || '';
-    var parts = [];
-    if (country) parts.push('Country: <b>' + country + '</b>');
-    if (basin)   parts.push('Basin: <b>'   + basin   + '</b>');
-    subEl.innerHTML = parts.join('<span class="sub-sep">·</span>');
-  } else {
-    subEl.innerHTML = '';
-  }
+var currentModalType = 'runoff';  // 'runoff' | 'storage'
 
+function openTsModal(type){
+  if(!activeId) return;
+  currentModalType = type;
+  var isStorage = (type==='storage');
+  var data = isStorage ? stData : tsData;
+  if(!data) return;
+  var modal=document.getElementById('ts-modal');
+  var res=RESERVOIRS.find(function(r){ return r.id===activeId; });
+  // Title
+  document.getElementById('ts-modal-title').textContent=(isStorage?'Storage — ':'Runoff — ')+'Reservoir #'+activeId;
+  document.getElementById('ts-modal-title').style.color=isStorage?getAccent4():getAccent();
+  // Sub
+  var subEl=document.getElementById('ts-modal-sub'), parts=[];
+  if(res){
+    var country=res['country']||res['Country']||'';
+    var basin=res['Basin']||res['basin']||'';
+    if(country) parts.push('Country: <b>'+country+'</b>');
+    if(basin)   parts.push('Basin: <b>'+basin+'</b>');
+  }
+  subEl.innerHTML=parts.join('<span class="sub-sep">·</span>');
+  // Sync metric dropdown
+  var modalSel=document.getElementById('ts-modal-metric');
+  modalSel.innerHTML='';
+  if(isStorage){
+    Object.keys(data).forEach(function(k){
+      if(k==='dates') return;
+      var o=document.createElement('option'); o.value=k; o.textContent=k.replace(/_/g,' '); modalSel.appendChild(o);
+    });
+    modalSel.value=document.getElementById('st-metric').value;
+  } else {
+    [{v:'Surface',l:'Surface Runoff'},{v:'Sub_Surface',l:'Sub-Surface Runoff'},{v:'Precip',l:'Precipitation'}].forEach(function(m){
+      var o=document.createElement('option'); o.value=m.v; o.textContent=m.l; modalSel.appendChild(o);
+    });
+    modalSel.value=document.getElementById('ts-metric').value;
+  }
   modal.classList.add('visible');
   renderTimeSeriesModal();
 }
 
-function closeTimeSeriesModal() {
-  var modal = document.getElementById('ts-modal');
-  if (modal) modal.classList.remove('visible');
-  closeTsModalMenu();
-}
-
-function toggleTsModalMenu(e) {
-  e.stopPropagation();
-  var dd = document.getElementById('ts-modal-menu-dropdown');
-  dd.classList.toggle('open');
-}
-function closeTsModalMenu() {
-  var dd = document.getElementById('ts-modal-menu-dropdown');
-  if (dd) dd.classList.remove('open');
-}
-document.addEventListener('click', function(e) {
-  var dd = document.getElementById('ts-modal-menu-dropdown');
-  if (!dd || !dd.classList.contains('open')) return;
-  var btn = document.querySelector('.ts-modal-menu-btn');
-  if (dd.contains(e.target) || (btn && btn.contains(e.target))) return;
-  dd.classList.remove('open');
-});
-
-function downloadTimeSeriesPNG() {
-  closeTsModalMenu();
-  if (!tsData || !activeId) return;
-
-  var svgEl = document.getElementById('ts-modal-svg');
-  var svgRect = document.getElementById('ts-modal-plot').getBoundingClientRect();
-  var scale = 2;
-
-  var bgColor   = cssVar('--surface') || '#111827';
-  var textColor = cssVar('--muted')   || '#64748b';
-
-  var yAxisVals = [
-    document.getElementById('ts-modal-y-max').textContent,
-    document.getElementById('ts-modal-y-mid').textContent,
-    document.getElementById('ts-modal-y-min').textContent
-  ];
-  var xTicks = Array.prototype.map.call(
-    document.querySelectorAll('#ts-modal-axis-x .x-tick'),
-    function(el){ return { text: el.textContent, pct: parseFloat(el.style.left) || 0, isLast: el.classList.contains('x-last') }; }
-  );
-
-  var yAxisW = 56 * scale;
-  var xAxisH = 24 * scale;
-  var pad    = 8 * scale;
-
-  var plotW = svgRect.width  * scale;
-  var plotH = svgRect.height * scale;
-
-  var clone = svgEl.cloneNode(true);
-  clone.setAttribute('width', plotW);
-  clone.setAttribute('height', plotH);
-
-  var serializer = new XMLSerializer();
-  var svgStr = serializer.serializeToString(clone);
-  var svgBlob = new Blob([svgStr], {type: 'image/svg+xml;charset=utf-8'});
-  var url = URL.createObjectURL(svgBlob);
-
-  var img = new Image();
-  img.onload = function() {
-    var canvas = document.createElement('canvas');
-    canvas.width  = yAxisW + plotW + pad;
-    canvas.height = plotH + xAxisH + pad;
-    var ctx = canvas.getContext('2d');
-
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Plot image
-    ctx.drawImage(img, yAxisW, 0, plotW, plotH);
-
-    // Y-axis labels (max, mid, min)
-    ctx.fillStyle = textColor;
-    ctx.font = '600 ' + (11 * scale) + 'px Bitter, serif';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'top';
-    ctx.fillText(yAxisVals[0], yAxisW - 6, 2);
-    ctx.textBaseline = 'middle';
-    ctx.fillText(yAxisVals[1], yAxisW - 6, plotH / 2);
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(yAxisVals[2], yAxisW - 6, plotH - 2);
-
-    // X-axis tick labels
-    ctx.font = '600 ' + (11 * scale) + 'px Bitter, serif';
-    ctx.textBaseline = 'top';
-    var axisY = plotH + 6 * scale;
-    xTicks.forEach(function(tick) {
-      var x = yAxisW + (tick.pct / 100) * plotW;
-      if (tick.pct === 0) ctx.textAlign = 'left';
-      else if (tick.isLast) ctx.textAlign = 'right';
-      else ctx.textAlign = 'center';
-      ctx.fillText(tick.text, x, axisY);
-    });
-
-    URL.revokeObjectURL(url);
-
-    canvas.toBlob(function(blob) {
-      var title = document.getElementById('ts-modal-title').textContent;
-      var metricSelect = document.getElementById('ts-modal-metric');
-      var metricLabel = metricSelect.options[metricSelect.selectedIndex].text;
-      var a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = title.replace(/\s+/g, '_') + '_' + metricLabel.replace(/\s+/g, '_') + '.png';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
-    }, 'image/png');
-  };
-  img.src = url;
-}
-
-function handleModalBackdropClick(e) {
-  if (e.target.id === 'ts-modal') closeTimeSeriesModal();
-}
-
-function syncMetricFromModal() {
-  var v = document.getElementById('ts-modal-metric').value;
-  document.getElementById('ts-metric').value = v;
-  renderTimeSeries();
+function syncMetricFromModal(){
+  var v=document.getElementById('ts-modal-metric').value;
+  if(currentModalType==='storage'){ document.getElementById('st-metric').value=v; renderStorageSeries(); }
+  else { document.getElementById('ts-metric').value=v; renderTimeSeries(); }
   renderTimeSeriesModal();
 }
 
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    var modal = document.getElementById('ts-modal');
-    if (modal && modal.classList.contains('visible')) closeTimeSeriesModal();
+function renderTimeSeriesModal(){
+  var modal=document.getElementById('ts-modal');
+  if(!modal.classList.contains('visible')) return;
+  var isStorage=(currentModalType==='storage');
+  var data=isStorage?stData:tsData;
+  if(!data) return;
+  var metric=document.getElementById('ts-modal-metric').value;
+  var values=data[metric], dates=data.dates;
+  if(!values||!values.length){ renderModalEmpty(); return; }
+  var clean=values.filter(function(v){ return v!==null&&v!==undefined&&!isNaN(v); });
+  if(!clean.length){ renderModalEmpty(); return; }
+  var min=Math.min.apply(null,clean), max=Math.max.apply(null,clean);
+  var mean=clean.reduce(function(a,b){return a+b;},0)/clean.length;
+  var dp=formatDp(Math.max(Math.abs(min),Math.abs(max)));
+  document.getElementById('ts-modal-min').textContent=min.toFixed(dp);
+  document.getElementById('ts-modal-mean').textContent=mean.toFixed(dp);
+  document.getElementById('ts-modal-max').textContent=max.toFixed(dp);
+  document.getElementById('ts-modal-y-max').textContent=max.toFixed(dp);
+  document.getElementById('ts-modal-y-mid').textContent=((max+min)/2).toFixed(dp);
+  document.getElementById('ts-modal-y-min').textContent=min.toFixed(dp);
+  var W=800,H=380,pad=8,n=values.length,range=max-min||1;
+  function xAt(i){ return pad+(i/(n-1))*(W-2*pad); }
+  function yAt(v){ return H-pad-((v-min)/range)*(H-2*pad); }
+  var pathD='',newSeg=true;
+  for(var i=0;i<n;i++){
+    var v=values[i]; if(v===null||v===undefined||isNaN(v)){newSeg=true;continue;}
+    pathD+=(newSeg?'M':'L')+xAt(i).toFixed(2)+' '+yAt(v).toFixed(2)+' '; newSeg=false;
   }
-});
-
-function renderTimeSeriesModal() {
-  var modal = document.getElementById('ts-modal');
-  if (!modal.classList.contains('visible')) return;
-  if (!tsData || !activeId) return;
-
-  var metric = document.getElementById('ts-modal-metric').value;
-  var values = tsData[metric];
-  var dates  = tsData.dates;
-  if (!values || !values.length) { renderModalEmpty(); return; }
-
-  var clean = values.filter(function(v){ return v !== null && v !== undefined && !isNaN(v); });
-  if (!clean.length) { renderModalEmpty(); return; }
-
-  var min = Math.min.apply(null, clean);
-  var max = Math.max.apply(null, clean);
-  var mean = clean.reduce(function(a,b){ return a+b; }, 0) / clean.length;
-
-  var absMax = Math.max(Math.abs(min), Math.abs(max));
-  var dp;
-  if      (absMax >= 100) dp = 0;
-  else if (absMax >= 10)  dp = 1;
-  else if (absMax >= 1)   dp = 2;
-  else if (absMax >= 0.1) dp = 3;
-  else                    dp = 4;
-
-  document.getElementById('ts-modal-min').textContent  = min.toFixed(dp);
-  document.getElementById('ts-modal-mean').textContent = mean.toFixed(dp);
-  document.getElementById('ts-modal-max').textContent  = max.toFixed(dp);
-  document.getElementById('ts-modal-y-max').textContent = max.toFixed(dp);
-  document.getElementById('ts-modal-y-mid').textContent = ((max + min) / 2).toFixed(dp);
-  document.getElementById('ts-modal-y-min').textContent = min.toFixed(dp);
-
-  var W = 800, H = 380, pad = 8;
-  var n = values.length;
-  var range = max - min || 1;
-
-  function xAt(i) { return pad + (i / (n - 1)) * (W - 2 * pad); }
-  function yAt(v) { return H - pad - ((v - min) / range) * (H - 2 * pad); }
-
-  var pathD = '';
-  var startNewSeg = true;
-  for (var i = 0; i < n; i++) {
-    var v = values[i];
-    if (v === null || v === undefined || isNaN(v)) { startNewSeg = true; continue; }
-    var x = xAt(i), y = yAt(v);
-    pathD += (startNewSeg ? 'M' : 'L') + x.toFixed(2) + ' ' + y.toFixed(2) + ' ';
-    startNewSeg = false;
-  }
-  var hasNulls = clean.length !== n;
-  var areaD = '';
-  if (!hasNulls) {
-    areaD = pathD + 'L' + xAt(n - 1).toFixed(2) + ' ' + (H - pad) +
-                   ' L' + xAt(0).toFixed(2)     + ' ' + (H - pad) + ' Z';
-  }
-
-  var isBarrier = activeType === 'barrier';
-  var stroke = isBarrier ? getBarrier() : getAccent();
-  var fill   = isBarrier ? getBarrierFill()  : getAccentFill();
-  var dotFill = stroke;
-  var isPrecip = (metric === 'Precip');
-  var gridColor = getGridLine();
-  var tooltipStroke = getTooltipStroke();
-
-  var gridY1 = pad;
-  var gridY2 = H / 2;
-  var gridY3 = H - pad;
-  var gridLines =
-    '<line x1="' + pad + '" y1="' + gridY1 + '" x2="' + (W - pad) + '" y2="' + gridY1 + '" stroke="'+gridColor+'" stroke-width="0.5" stroke-dasharray="3 3"/>' +
-    '<line x1="' + pad + '" y1="' + gridY2 + '" x2="' + (W - pad) + '" y2="' + gridY2 + '" stroke="'+gridColor+'" stroke-width="0.5" stroke-dasharray="3 3"/>' +
-    '<line x1="' + pad + '" y1="' + gridY3 + '" x2="' + (W - pad) + '" y2="' + gridY3 + '" stroke="'+gridColor+'" stroke-width="0.5" stroke-dasharray="3 3"/>';
-
-  var svg = document.getElementById('ts-modal-svg');
-  if (isPrecip) {
-    var baseM = Math.max(0, min);
-    var baseYM = yAt(baseM);
-    var plotWM = W - 2 * pad;
-    var slotM  = plotWM / n;
-    var bwM    = Math.max(0.8, slotM * 0.7);
-    var barsHtmlM = '';
-    for (var mi = 0; mi < n; mi++) {
-      var mv = values[mi];
-      if (mv === null || mv === undefined || isNaN(mv)) continue;
-      var cxM = xAt(mi);
-      var byM = yAt(mv);
-      var topYM = Math.min(byM, baseYM);
-      var hPxM  = Math.abs(byM - baseYM);
-      if (hPxM < 1) hPxM = 1;
-      barsHtmlM +=
-        '<rect x="' + (cxM - bwM / 2).toFixed(2) + '" y="' + topYM.toFixed(2) +
-        '" width="' + bwM.toFixed(2) + '" height="' + hPxM.toFixed(2) +
-        '" fill="' + stroke + '" />';
+  var hasNulls=clean.length!==n, areaD='';
+  if(!hasNulls) areaD=pathD+'L'+xAt(n-1).toFixed(2)+' '+(H-pad)+' L'+xAt(0).toFixed(2)+' '+(H-pad)+' Z';
+  var stroke=isStorage?getAccent4():getAccent();
+  var fill  =isStorage?getAccent4Fill():getAccentFill();
+  var isPrecip=(!isStorage&&metric==='Precip')||isStorage;
+  var gc=getGridLine(), ts=getTooltipStroke();
+  var gridLines=
+    '<line x1="'+pad+'" y1="'+pad+'" x2="'+(W-pad)+'" y2="'+pad+'" stroke="'+gc+'" stroke-width=".5" stroke-dasharray="3 3"/>'+
+    '<line x1="'+pad+'" y1="'+(H/2)+'" x2="'+(W-pad)+'" y2="'+(H/2)+'" stroke="'+gc+'" stroke-width=".5" stroke-dasharray="3 3"/>'+
+    '<line x1="'+pad+'" y1="'+(H-pad)+'" x2="'+(W-pad)+'" y2="'+(H-pad)+'" stroke="'+gc+'" stroke-width=".5" stroke-dasharray="3 3"/>';
+  var svg=document.getElementById('ts-modal-svg');
+  if(isPrecip){
+    var baseY=yAt(Math.max(0,min)), slot=(W-2*pad)/n, bw=Math.max(.8,slot*.7), bars='';
+    for(var bi=0;bi<n;bi++){
+      var bv=values[bi]; if(bv===null||bv===undefined||isNaN(bv)) continue;
+      var cx=xAt(bi),by=yAt(bv),topY=Math.min(by,baseY),hh=Math.abs(by-baseY); if(hh<1)hh=1;
+      bars+='<rect x="'+(cx-bw/2).toFixed(2)+'" y="'+topY.toFixed(2)+'" width="'+bw.toFixed(2)+'" height="'+hh.toFixed(2)+'" fill="'+stroke+'"/>';
     }
-    svg.innerHTML =
-      gridLines +
-      barsHtmlM +
-      '<line id="ts-modal-hover-line" x1="0" y1="0" x2="0" y2="' + H + '" stroke="'+getMuted()+'" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>' +
-      '<circle id="ts-modal-hover-dot" r="5" cx="0" cy="0" fill="' + dotFill + '" stroke="'+tooltipStroke+'" stroke-width="2" opacity="0"/>';
+    svg.innerHTML=gridLines+bars+
+      '<line id="ts-modal-hover-line" x1="0" y1="0" x2="0" y2="'+H+'" stroke="'+getMuted()+'" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>'+
+      '<circle id="ts-modal-hover-dot" r="5" cx="0" cy="0" fill="'+stroke+'" stroke="'+ts+'" stroke-width="2" opacity="0"/>';
   } else {
-    svg.innerHTML =
-      gridLines +
-      (areaD ? '<path d="' + areaD + '" fill="' + fill + '" stroke="none"/>' : '') +
-      '<path d="' + pathD + '" fill="none" stroke="' + stroke + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>' +
-      '<line id="ts-modal-hover-line" x1="0" y1="0" x2="0" y2="' + H + '" stroke="'+getMuted()+'" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>' +
-      '<circle id="ts-modal-hover-dot" r="5" cx="0" cy="0" fill="' + dotFill + '" stroke="'+tooltipStroke+'" stroke-width="2" opacity="0"/>';
+    svg.innerHTML=gridLines+
+      (areaD?'<path d="'+areaD+'" fill="'+fill+'" stroke="none"/>':'')+
+      '<path d="'+pathD+'" fill="none" stroke="'+stroke+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '<line id="ts-modal-hover-line" x1="0" y1="0" x2="0" y2="'+H+'" stroke="'+getMuted()+'" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>'+
+      '<circle id="ts-modal-hover-dot" r="5" cx="0" cy="0" fill="'+stroke+'" stroke="'+ts+'" stroke-width="2" opacity="0"/>';
   }
-
-  var modalWidth = document.querySelector('.ts-modal-box').getBoundingClientRect().width || 800;
-  var availableX = modalWidth - 80;
-  var targetTicks = Math.max(2, Math.min(n, Math.min(12, Math.floor(availableX / 110))));
-  var axisHtml = '<div class="x-track">';
-  for (var t = 0; t < targetTicks; t++) {
-    var idxT = Math.round((t / (targetTicks - 1)) * (n - 1));
-    var pct = (idxT / (n - 1)) * 100;
-    var cls = 'x-tick';
-    if (t === 0)                  cls += ' x-first';
-    else if (t === targetTicks-1) cls += ' x-last';
-    axisHtml += '<span class="' + cls + '" style="left:' + pct + '%;">' + dates[idxT] + '</span>';
+  // X axis ticks
+  var modalW=document.querySelector('.ts-modal-box').getBoundingClientRect().width||800;
+  var targetTicks=Math.max(2,Math.min(n,Math.min(12,Math.floor((modalW-80)/110))));
+  var axisHtml='<div class="x-track">';
+  for(var t=0;t<targetTicks;t++){
+    var idxT=Math.round((t/(targetTicks-1))*(n-1));
+    var pct=(idxT/(n-1))*100;
+    var cls='x-tick'+(t===0?' x-first':t===targetTicks-1?' x-last':'');
+    axisHtml+='<span class="'+cls+'" style="left:'+pct+'%">'+dates[idxT]+'</span>';
   }
-  axisHtml += '</div>';
-  document.getElementById('ts-modal-axis-x').innerHTML = axisHtml;
-
-  var plot = document.getElementById('ts-modal-plot');
-  var tip  = document.getElementById('ts-modal-tooltip');
-  var line = document.getElementById('ts-modal-hover-line');
-  var dot  = document.getElementById('ts-modal-hover-dot');
-
-  var metricLabels = {
-    'Surface':     'Surface Runoff',
-    'Sub_Surface': 'Sub-Surface Runoff',
-    'Precip':      'Precipitation'
+  axisHtml+='</div>';
+  document.getElementById('ts-modal-axis-x').innerHTML=axisHtml;
+  var plot=document.getElementById('ts-modal-plot'), tip=document.getElementById('ts-modal-tooltip');
+  var hl=document.getElementById('ts-modal-hover-line'), hd=document.getElementById('ts-modal-hover-dot');
+  var metricLabel=metric.replace(/_/g,' ');
+  plot.onmousemove=function(e){
+    var rect=plot.getBoundingClientRect(), relX=(e.clientX-rect.left)/rect.width;
+    var idx=Math.max(0,Math.min(n-1,Math.round(relX*(n-1))));
+    var v=values[idx]; if(v===null||v===undefined||isNaN(v)){ hl.style.opacity=0;hd.style.opacity=0;tip.style.opacity=0; return; }
+    hl.setAttribute('x1',xAt(idx)); hl.setAttribute('x2',xAt(idx)); hl.style.opacity=1;
+    hd.setAttribute('cx',xAt(idx)); hd.setAttribute('cy',yAt(v));   hd.style.opacity=1;
+    tip.style.left=(xAt(idx)/W*rect.width)+'px'; tip.style.top=(yAt(v)/H*rect.height)+'px';
+    tip.innerHTML='<div class="tt-date">'+dates[idx]+'</div><div class="tt-row"><span class="tt-dot" style="background:'+stroke+'"></span><span class="tt-label">'+metricLabel+':</span><span class="tt-val">'+v.toFixed(dp)+'</span></div>';
+    tip.style.opacity=1;
   };
-  var metricLabel = metricLabels[metric] || metric;
-
-  plot.onmousemove = function(e) {
-    var rect = plot.getBoundingClientRect();
-    var relX = (e.clientX - rect.left) / rect.width;
-    var idx  = Math.round(relX * (n - 1));
-    if (idx < 0) idx = 0; if (idx > n - 1) idx = n - 1;
-    var v = values[idx];
-    if (v === null || v === undefined || isNaN(v)) {
-      line.style.opacity = 0; dot.style.opacity = 0; tip.style.opacity = 0;
-      return;
-    }
-    var xPx = (xAt(idx) / W) * rect.width;
-    var yPx = (yAt(v)   / H) * rect.height;
-    line.setAttribute('x1', xAt(idx)); line.setAttribute('x2', xAt(idx));
-    line.style.opacity = 1;
-    dot.setAttribute('cx', xAt(idx));  dot.setAttribute('cy', yAt(v));
-    dot.style.opacity = 1;
-    tip.style.left = xPx + 'px';
-    tip.style.top  = yPx + 'px';
-    tip.innerHTML =
-      '<div class="tt-date">' + dates[idx] + '</div>' +
-      '<div class="tt-row">' +
-        '<span class="tt-dot" style="background:' + dotFill + '"></span>' +
-        '<span class="tt-label">' + metricLabel + ':</span>' +
-        '<span class="tt-val">' + v.toFixed(dp) + '</span>' +
-      '</div>';
-    tip.style.opacity = 1;
-  };
-  plot.onmouseleave = function() {
-    line.style.opacity = 0;
-    dot.style.opacity  = 0;
-    tip.style.opacity  = 0;
-  };
+  plot.onmouseleave=function(){ hl.style.opacity=0;hd.style.opacity=0;tip.style.opacity=0; };
 }
 
-function renderModalEmpty() {
-  document.getElementById('ts-modal-min').textContent  = '–';
-  document.getElementById('ts-modal-mean').textContent = '–';
-  document.getElementById('ts-modal-max').textContent  = '–';
-  document.getElementById('ts-modal-y-max').textContent = '–';
-  document.getElementById('ts-modal-y-mid').textContent = '–';
-  document.getElementById('ts-modal-y-min').textContent = '–';
-  document.getElementById('ts-modal-axis-x').innerHTML = '<div class="x-track"><span class="x-tick x-first">–</span><span class="x-tick x-last" style="left:100%;">–</span></div>';
-  document.getElementById('ts-modal-svg').innerHTML =
-    '<text x="400" y="190" text-anchor="middle" fill="'+getMuted()+'" font-family="Bitter,serif" font-size="14" font-style="italic">No time series data</text>';
+function renderModalEmpty(){
+  ['ts-modal-min','ts-modal-mean','ts-modal-max','ts-modal-y-max','ts-modal-y-mid','ts-modal-y-min'].forEach(function(id){ document.getElementById(id).textContent='–'; });
+  document.getElementById('ts-modal-axis-x').innerHTML='<div class="x-track"><span class="x-tick x-first">–</span><span class="x-tick x-last" style="left:100%">–</span></div>';
+  document.getElementById('ts-modal-svg').innerHTML='<text x="400" y="190" text-anchor="middle" fill="'+getMuted()+'" font-family="Bitter,serif" font-size="14" font-style="italic">No data</text>';
 }
+
+function closeTimeSeriesModal(){ document.getElementById('ts-modal').classList.remove('visible'); }
+function handleModalBackdropClick(e){ if(e.target.id==='ts-modal') closeTimeSeriesModal(); }
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeTimeSeriesModal(); });
 
 // ─────────────────────────────────────────────────
 //  Panel toggle + Resize
 // ─────────────────────────────────────────────────
-var panelOpen=true;
-var panelWidth = 400;
-
+var panelOpen=true, panelWidth=400;
 function togglePanel(){
   panelOpen=!panelOpen;
   document.getElementById('panel').classList.toggle('collapsed',!panelOpen);
   var btn=document.getElementById('toggle-panel');
   btn.classList.toggle('collapsed',!panelOpen);
   btn.innerHTML=panelOpen?'&#8249;':'&#8250;';
-  if (panelOpen) btn.style.left = panelWidth + 'px';
-  else           btn.style.left = '';
+  btn.style.left=panelOpen?panelWidth+'px':'';
   setTimeout(function(){ map.invalidateSize(); },310);
 }
-
-(function setupResize() {
-  var handle = document.getElementById('panel-resize');
-  var panel  = document.getElementById('panel');
-  var toggleBtn = document.getElementById('toggle-panel');
-  var workspace = document.querySelector('.workspace');
-
-  function readBounds() {
-    var s = getComputedStyle(document.documentElement);
-    var minStr = s.getPropertyValue('--panel-min').trim();
-    var maxStr = s.getPropertyValue('--panel-max').trim();
-    function parsePx(v) {
-      if (v.endsWith('vw')) return window.innerWidth * parseFloat(v) / 100;
-      if (v.endsWith('px')) return parseFloat(v);
-      return parseFloat(v);
-    }
-    return { min: parsePx(minStr) || 220, max: parsePx(maxStr) || 640 };
-  }
-
-  function setWidth(px) {
-    var b = readBounds();
-    var wsRect = workspace.getBoundingClientRect();
-    var ceiling = Math.min(b.max, wsRect.width - 120);
-    if (ceiling < b.min) ceiling = b.min;
-    if (px < b.min) px = b.min;
-    if (px > ceiling) px = ceiling;
-    panelWidth = px;
-    panel.style.width = px + 'px';
-    if (panelOpen) toggleBtn.style.left = px + 'px';
-    map.invalidateSize();
-  }
-
-  var dragging = false;
-  var startX = 0, startW = 0;
-
-  function onPointerDown(e) {
-    if (panel.classList.contains('collapsed')) return;
-    dragging = true;
-    startX = (e.touches ? e.touches[0].clientX : e.clientX);
-    startW = panel.getBoundingClientRect().width;
-    panel.classList.add('resizing');
-    workspace.classList.add('resizing');
-    handle.classList.add('dragging');
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    e.preventDefault();
-  }
-  function onPointerMove(e) {
-    if (!dragging) return;
-    var x = (e.touches ? e.touches[0].clientX : e.clientX);
-    setWidth(startW + (x - startX));
-  }
-  function onPointerUp() {
-    if (!dragging) return;
-    dragging = false;
-    panel.classList.remove('resizing');
-    workspace.classList.remove('resizing');
-    handle.classList.remove('dragging');
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  }
-
-  handle.addEventListener('mousedown',  onPointerDown);
-  window.addEventListener('mousemove',  onPointerMove);
-  window.addEventListener('mouseup',    onPointerUp);
-  handle.addEventListener('touchstart', onPointerDown, {passive:false});
-  window.addEventListener('touchmove',  onPointerMove,  {passive:false});
-  window.addEventListener('touchend',   onPointerUp);
-
-  handle.addEventListener('dblclick', function() { setWidth(400); });
-
-  window.addEventListener('resize', function() {
-    setWidth(panel.getBoundingClientRect().width);
-    map.invalidateSize();
-  });
-
-  setTimeout(function(){
-    panelWidth = panel.getBoundingClientRect().width || 400;
-    if (panelOpen) toggleBtn.style.left = panelWidth + 'px';
-  }, 0);
+(function setupResize(){
+  var handle=document.getElementById('panel-resize'), panel=document.getElementById('panel');
+  var toggleBtn=document.getElementById('toggle-panel'), workspace=document.querySelector('.workspace');
+  function readBounds(){ var s=getComputedStyle(document.documentElement); function px(v){ return v.endsWith('vw')?window.innerWidth*parseFloat(v)/100:parseFloat(v)||0; } return {min:px(s.getPropertyValue('--panel-min').trim())||220,max:px(s.getPropertyValue('--panel-max').trim())||640}; }
+  function setWidth(px){ var b=readBounds(),wr=workspace.getBoundingClientRect(),ceiling=Math.min(b.max,wr.width-120); if(ceiling<b.min)ceiling=b.min; if(px<b.min)px=b.min; if(px>ceiling)px=ceiling; panelWidth=px; panel.style.width=px+'px'; if(panelOpen) toggleBtn.style.left=px+'px'; map.invalidateSize(); }
+  var dragging=false,startX=0,startW=0;
+  function onDown(e){ if(panel.classList.contains('collapsed'))return; dragging=true; startX=(e.touches?e.touches[0].clientX:e.clientX); startW=panel.getBoundingClientRect().width; panel.classList.add('resizing'); workspace.classList.add('resizing'); handle.classList.add('dragging'); document.body.style.cursor='col-resize'; document.body.style.userSelect='none'; e.preventDefault(); }
+  function onMove(e){ if(!dragging)return; setWidth(startW+((e.touches?e.touches[0].clientX:e.clientX)-startX)); }
+  function onUp(){ if(!dragging)return; dragging=false; panel.classList.remove('resizing'); workspace.classList.remove('resizing'); handle.classList.remove('dragging'); document.body.style.cursor=''; document.body.style.userSelect=''; }
+  handle.addEventListener('mousedown',onDown); window.addEventListener('mousemove',onMove); window.addEventListener('mouseup',onUp);
+  handle.addEventListener('touchstart',onDown,{passive:false}); window.addEventListener('touchmove',onMove,{passive:false}); window.addEventListener('touchend',onUp);
+  handle.addEventListener('dblclick',function(){ setWidth(400); });
+  window.addEventListener('resize',function(){ setWidth(panel.getBoundingClientRect().width); map.invalidateSize(); });
+  setTimeout(function(){ panelWidth=panel.getBoundingClientRect().width||400; if(panelOpen) toggleBtn.style.left=panelWidth+'px'; },0);
 })();
 </script>
 </body>
