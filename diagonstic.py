@@ -1,114 +1,157 @@
+"""
+diagnose.py
+-----------
+Checks the geojson/reservoir/ output folder to verify every feature has:
+  - timeseries_{gww_id}.json  with non-empty Surface, Sub_Surface, Precip
+  - storage_{gww_id}.json     present
+  - watershed_{gww_id}.geojson present
+  - downstream_{gww_id}.geojson present
+
+All files are keyed by GWW_reservoir_id (leading zeros stripped).
+"""
+
 import os
-import sys
+import json
 import argparse
-import pandas as pd
+from collections import defaultdict
 
 
-def normalise_id(val) -> str:
-    s = str(val).strip()
-    if s.endswith(".0"):
-        s = s[:-2]
-    return s
+def parse_args():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--reservoir_dir",  default="geojson/reservoir",
+                   help="Directory containing per-feature files")
+    p.add_argument("--reservoir_json", default="geojson/reservoir.json",
+                   help="Coordinate JSON to map gww_id → gdw_id")
+    return p.parse_args()
 
 
-def load_csv_ids(csv_path):
-    if not os.path.exists(csv_path):
-        return None
-    df = pd.read_csv(csv_path)
-    return set(df["id"].apply(normalise_id))
-
-
-def list_runoff_ids(runoff_dir):
-    # Return the set of IDs for which a GDWID_{id}.txt file exists
-    if not os.path.isdir(runoff_dir):
-        return None
-    ids = set()
-    for name in os.listdir(runoff_dir):
-        if name.startswith("GDWID_") and name.endswith(".txt"):
-            ids.add(name[len("GDWID_"):-len(".txt")])
-    return ids
-
-
-def list_timeseries_ids(out_dir):
-    # Return the set of IDs for which a timeseries_{id}.json file exists
-    if not os.path.isdir(out_dir):
-        return None
-    ids = set()
-    for name in os.listdir(out_dir):
+def scan_gww_ids(res_dir):
+    """Return sorted list of GWW ids from timeseries_*.json filenames."""
+    ids = []
+    for name in os.listdir(res_dir):
         if name.startswith("timeseries_") and name.endswith(".json"):
-            ids.add(name[len("timeseries_"):-len(".json")])
-    return ids
+            ids.append(name[len("timeseries_"):-len(".json")])
+    return sorted(ids, key=lambda x: int(x) if x.isdigit() else float('inf'))
 
 
-def diagnose(kind, csv_path, runoff_dir, out_dir):
-    print(f"\n=== {kind.upper()} ===")
-    csv_ids = load_csv_ids(csv_path)
-    runoff_ids = list_runoff_ids(runoff_dir)
-    ts_ids = list_timeseries_ids(out_dir)
+def load_gww_to_gdw(json_path):
+    """Load reservoir.json and return {gww_id: gdw_id} mapping."""
+    if not os.path.exists(json_path):
+        return {}
+    try:
+        with open(json_path) as f:
+            records = json.load(f)
+        return {str(r.get("gww_id", "")): str(r.get("id", ""))
+                for r in records if r.get("gww_id")}
+    except Exception:
+        return {}
 
-    if csv_ids is None:
-        print(f"  [ERROR] CSV not found: {csv_path}")
-        return
-    if runoff_ids is None:
-        print(f"  [ERROR] Runoff dir not found: {runoff_dir}")
-        return
-    if ts_ids is None:
-        print(f"  [WARN]  Output dir not found: {out_dir}")
-        ts_ids = set()
 
-    print(f"  CSV ids        : {len(csv_ids)}")
-    print(f"  Runoff files   : {len(runoff_ids)}  ({runoff_dir})")
-    print(f"  Timeseries JSON: {len(ts_ids)}  ({out_dir})")
+def check_timeseries(path):
+    """Return dict of metric → status string."""
+    metrics = ["Surface", "Sub_Surface", "Precip"]
+    if not os.path.exists(path):
+        return {m: "missing_file" for m in metrics}
+    try:
+        with open(path) as f:
+            data = json.load(f)
+    except Exception:
+        return {m: "parse_error" for m in metrics}
+    result = {}
+    for m in metrics:
+        vals = data.get(m, [])
+        non_null = [v for v in vals if v is not None]
+        result[m] = "ok" if non_null else ("empty" if vals else "missing_key")
+    return result
 
-    # IDs in CSV but with no source runoff file
-    missing_source = sorted(csv_ids - runoff_ids, key=lambda x: int(x) if x.isdigit() else 1e18)
-    # IDs in CSV but with no output JSON (should equal missing_source if the script worked)
-    missing_output = sorted(csv_ids - ts_ids, key=lambda x: int(x) if x.isdigit() else 1e18)
-    # IDs in runoff dir that aren't in the CSV (orphan source files)
-    orphan_source = sorted(runoff_ids - csv_ids, key=lambda x: int(x) if x.isdigit() else 1e18)
 
-    print(f"\n  CSV ids with NO runoff source file : {len(missing_source)}")
-    if missing_source:
-        for i in missing_source:
-            print(f"     - {i}")
-
-    print(f"\n  CSV ids with NO output JSON        : {len(missing_output)}")
-    if set(missing_output) != set(missing_source):
-        diff_only_output = sorted(set(missing_output) - set(missing_source), key=lambda x: int(x) if x.isdigit() else 1e18)
-        if diff_only_output:
-            print(f"     (these have a source file but no output - script failed to write them)")
-            for i in diff_only_output:
-                print(f"     - {i}")
-
-    print(f"\n  Orphan runoff files (not in CSV)   : {len(orphan_source)}")
-    if orphan_source and len(orphan_source) <= 50:
-        for i in orphan_source:
-            print(f"     - {i}")
-    elif orphan_source:
-        print(f"     (first 20): {orphan_source[:20]}")
+def check_file_exists(path):
+    return "ok" if os.path.exists(path) else "missing"
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--reservoirs_csv",      default="Dataset/GBMIM_Reservoirs.csv")
-    ap.add_argument("--barriers_csv",        default="Dataset/GBMIM_Barriers.csv")
-    ap.add_argument("--runoff_reservoir_dir", default="Dataset/data/runoff_reservoir")
-    ap.add_argument("--runoff_barrier_dir",   default="Dataset/data/runoff_barrier")
-    ap.add_argument("--geojson_dir",          default="geojson")
-    args = ap.parse_args()
+    args = parse_args()
+    res_dir = args.reservoir_dir
 
-    diagnose(
-        "reservoir",
-        args.reservoirs_csv,
-        args.runoff_reservoir_dir,
-        os.path.join(args.geojson_dir, "reservoir"),
-    )
-    diagnose(
-        "barrier",
-        args.barriers_csv,
-        args.runoff_barrier_dir,
-        os.path.join(args.geojson_dir, "barrier"),
-    )
+    if not os.path.isdir(res_dir):
+        print(f"[ERROR] Directory not found: {res_dir}")
+        return
+
+    gww_ids = scan_gww_ids(res_dir)
+    gww_to_gdw = load_gww_to_gdw(args.reservoir_json)
+
+    print(f"Features found (by timeseries files): {len(gww_ids)}")
+    if gww_to_gdw:
+        print(f"GWW→GDW mapping loaded: {len(gww_to_gdw)} entries")
+    print()
+
+    issues = defaultdict(list)
+    counters = defaultdict(int)
+
+    for gww in gww_ids:
+        # Timeseries metrics
+        ts_checks = check_timeseries(os.path.join(res_dir, f"timeseries_{gww}.json"))
+        for metric, status in ts_checks.items():
+            if status != "ok":
+                issues[gww].append(f"runoff/{metric}: {status}")
+                counters[f"runoff/{metric}/{status}"] += 1
+            else:
+                counters[f"runoff/{metric}/ok"] += 1
+
+        # Storage
+        st = check_file_exists(os.path.join(res_dir, f"storage_{gww}.json"))
+        if st != "ok":
+            issues[gww].append(f"storage: {st}")
+            counters["storage/missing"] += 1
+        else:
+            counters["storage/ok"] += 1
+
+        # Watershed
+        ws = check_file_exists(os.path.join(res_dir, f"watershed_{gww}.geojson"))
+        if ws != "ok":
+            issues[gww].append(f"watershed: {ws}")
+            counters["watershed/missing"] += 1
+        else:
+            counters["watershed/ok"] += 1
+
+        # Downstream
+        ds = check_file_exists(os.path.join(res_dir, f"downstream_{gww}.geojson"))
+        if ds != "ok":
+            issues[gww].append(f"downstream: {ds}")
+            counters["downstream/missing"] += 1
+        else:
+            counters["downstream/ok"] += 1
+
+    # ── Summary ──────────────────────────────────────────────────
+    print("=== Coverage Summary ===")
+    checks = [
+        ("runoff/Surface",     "Surface Runoff"),
+        ("runoff/Sub_Surface", "Sub-Surface Runoff"),
+        ("runoff/Precip",      "Precipitation"),
+        ("storage",            "Storage"),
+        ("watershed",          "Watershed"),
+        ("downstream",         "Downstream"),
+    ]
+    for key, label in checks:
+        ok      = counters.get(f"{key}/ok", 0)
+        missing = (counters.get(f"{key}/missing", 0)
+                   + counters.get(f"{key}/missing_file", 0)
+                   + counters.get(f"{key}/missing_key", 0))
+        empty   = counters.get(f"{key}/empty", 0)
+        total   = ok + missing + empty
+        parts   = [f"{ok}/{total} ok"]
+        if missing: parts.append(f"{missing} missing")
+        if empty:   parts.append(f"{empty} empty")
+        print(f"  {label:<22}: {', '.join(parts)}")
+
+    # ── Per-feature issues ────────────────────────────────────────
+    if issues:
+        print(f"\n=== Features with Issues ({len(issues)}) ===")
+        for gww in sorted(issues.keys(), key=lambda x: int(x) if x.isdigit() else float('inf')):
+            gdw = gww_to_gdw.get(gww, "?")
+            print(f"  gww={gww:>8}  gdw={gdw:>8} : {'; '.join(issues[gww])}")
+    else:
+        print("\nAll features complete — no issues found.")
 
 
 if __name__ == "__main__":

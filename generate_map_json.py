@@ -325,9 +325,13 @@ def main():
     print(f"  Skipped      : {src_counts['skipped']}")
     print(f"  Total records: {len(coord_records)}")
 
-    # Write reservoir.json (strip internal keys before writing)
-    public_records = [{k: v for k, v in r.items() if not k.startswith("_")}
+    # Write reservoir.json (strip internal keys before writing, but keep gww_id)
+    public_records = [{k: v for k, v in r.items() if not k.startswith("_") or k == "_gww_id"}
                       for r in coord_records]
+    # Rename _gww_id → gww_id in public output
+    for rec in public_records:
+        if "_gww_id" in rec:
+            rec["gww_id"] = rec.pop("_gww_id")
     coords_path = os.path.join(args.geojson_dir, "reservoir.json")
     with open(coords_path, "w", encoding="utf-8") as f:
         json.dump(public_records, f, separators=(",", ":"))
@@ -353,7 +357,7 @@ def main():
 
         # -- Watershed polygon --
         if geom is not None and not geom.is_empty:
-            ws_path = os.path.join(res_dir, f"watershed_{fid}.geojson")
+            ws_path = os.path.join(res_dir, f"watershed_{gww_id}.geojson")
             with open(ws_path, "w", encoding="utf-8") as f:
                 json.dump(geom_to_feature(geom, fid), f, separators=(",", ":"))
             ws_bytes += os.path.getsize(ws_path)
@@ -368,7 +372,7 @@ def main():
                 ds_gdf = ds_gdf.copy()
                 ds_gdf["geometry"] = ds_gdf["geometry"].simplify(
                     args.line_simplify, preserve_topology=True)
-            ds_path = os.path.join(res_dir, f"downstream_{fid}.geojson")
+            ds_path = os.path.join(res_dir, f"downstream_{gww_id}.geojson")
             ds_gdf.to_file(ds_path, driver="GeoJSON")
             ds_bytes += os.path.getsize(ds_path)
             ds_ok += 1
@@ -378,7 +382,7 @@ def main():
         # -- Runoff timeseries --
         ro = load_runoff(runoff_dirs, fid)
         if ro is not None:
-            ro_path = os.path.join(res_dir, f"timeseries_{fid}.json")
+            ro_path = os.path.join(res_dir, f"timeseries_{gww_id}.json")
             with open(ro_path, "w", encoding="utf-8") as f:
                 json.dump(ro, f, separators=(",", ":"))
             ro_bytes += os.path.getsize(ro_path)
@@ -390,7 +394,7 @@ def main():
         # -- Storage timeseries (keyed by GWW_reservoir_id) --
         st = load_storage(storage_index[gww_id])
         if st is not None:
-            st_path = os.path.join(res_dir, f"storage_{fid}.json")
+            st_path = os.path.join(res_dir, f"storage_{gww_id}.json")
             with open(st_path, "w", encoding="utf-8") as f:
                 json.dump(st, f, separators=(",", ":"))
             st_bytes += os.path.getsize(st_path)

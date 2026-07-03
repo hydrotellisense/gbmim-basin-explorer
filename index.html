@@ -509,7 +509,7 @@
 
       <div class="layer-toggles">
         <div class="layer-toggle-row">
-          <div class="layer-toggle-label"><div class="layer-dot" style="background:var(--accent2)"></div>Show Watershed</div>
+          <div class="layer-toggle-label"><div class="layer-dot" style="background:var(--accent2)"></div>Show Reservoir Region</div>
           <label class="toggle-switch"><input type="checkbox" id="toggle-watershed" checked onchange="refreshLayers()"/><span class="toggle-slider"></span></label>
         </div>
         <div class="layer-toggle-row">
@@ -941,11 +941,12 @@ function selectFeature(id){
   var res=RESERVOIRS.find(function(r){ return r.id===id; });
   updateCard(id,res,null,null,null,true);
   document.getElementById('spinner').style.display='block';
+  var gww = res ? (res.gww_id || id) : id;
   Promise.all([
-    fetchGeoJSON('watershed_'+id+'.geojson'),
-    fetchGeoJSON('downstream_'+id+'.geojson'),
-    fetchGeoJSON('timeseries_'+id+'.json'),
-    fetchGeoJSON('storage_'+id+'.json')
+    fetchGeoJSON('watershed_'+gww+'.geojson'),
+    fetchGeoJSON('downstream_'+gww+'.geojson'),
+    fetchGeoJSON('timeseries_'+gww+'.json'),
+    fetchGeoJSON('storage_'+gww+'.json')
   ]).then(function(results){
     wsData=results[0]; dsData=results[1]; tsData=results[2]; stData=results[3];
     var drawn=drawLayers(wsData,dsData);
@@ -970,17 +971,20 @@ function updateCard(id,res,hasWS,hasDS,hasST,loading){
   }
   var basin  =res['Basin']   ||res['basin']  ||'';
   var country=res['country'] ||res['Country']||'';
-  var arealRaw=res['Areal_Impact (%)']||res['Areal_Impact_']||res['areal_impact']||'';
+  var gwwId  =res['gww_id']  ||'';
+  var arealRaw=res['Areal_Impact']||res['Areal_Impact (%)']||res['areal_impact']||'';
   var arealVal=arealRaw?String(arealRaw).replace(/%$/,'')+'%':'';
   card.innerHTML=
-    '<div class="ic-title">Reservoir #'+id+
+    '<div class="ic-title">Reservoir #'+gwwId+
       '<button class="ic-clear" onclick="clearSelection()">&#10005; Clear</button>'+
     '</div>'+
     '<div style="margin-top:10px"></div>'+
-    row('Latitude',  res.lat.toFixed(5))+
-    row('Longitude', res.lng.toFixed(5))+
-    row('Country',   country)+
-    row('Basin',     basin)+
+    row('GDW ID',     id)+
+    row('GWW ID',     gwwId)+
+    row('Latitude',   res.lat.toFixed(5))+
+    row('Longitude',  res.lng.toFixed(5))+
+    row('Country',    country)+
+    row('Basin',      basin)+
     row('Areal Impact',arealVal)+
     '<div style="margin-top:6px;">'+
       '<span class="badge '+(hasWS?'badge-ws':'badge-none')+'">'+(hasWS?'&#10003; Watershed':'&#10007; No watershed')+'</span> '+
