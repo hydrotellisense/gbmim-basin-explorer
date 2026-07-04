@@ -890,7 +890,7 @@ function handleSearch(){
 // ─────────────────────────────────────────────────
 var cache={};
 function fetchGeoJSON(filename){
-  var url = GEOJSON_DIR+'/reservoir/'+filename;
+  var url = GEOJSON_DIR+'/reservoir_corrected/'+filename;
   if (cache[url]) return Promise.resolve(cache[url]);
   return fetch(url).then(function(r){ return r.ok?r.json():null; })
     .then(function(d){ if(d) cache[url]=d; return d; }).catch(function(){ return null; });
