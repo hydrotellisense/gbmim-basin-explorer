@@ -306,6 +306,8 @@ def correct_all(ws, contained, partial, order, gww_map):
         subs_p = partial.get(gww, [])     # [(C, inter_area)]
 
         if not subs_c and not subs_p:
+            main_ts["area_km2"]     = round(ws[gww][1], 4)
+            main_ts["net_area_km2"] = round(ws[gww][1], 4)
             corrected_cache[gww] = main_ts
             stats["unchanged"] += 1
             continue
@@ -350,11 +352,15 @@ def correct_all(ws, contained, partial, order, gww_map):
 
         if net_area <= 0:
             print(f"  [WARN] gww={gww}: net_area={net_area:.2f} km² ≤ 0 — skipping")
+            main_ts["area_km2"]     = round(area_A, 4)
+            main_ts["net_area_km2"] = round(area_A, 4)   # fallback: full area
             corrected_cache[gww] = main_ts
             stats["negative_area"] += 1
             continue
 
         new_ts = {k: v for k, v in main_ts.items()}
+        new_ts["area_km2"]     = round(area_A, 4)
+        new_ts["net_area_km2"] = round(net_area, 4)
 
         for metric in METRICS:
             main_vals = main_ts.get(metric, [])

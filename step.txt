@@ -1,0 +1,6 @@
+1) Run "generate_map_json.py" --> create initial json(s)
+2) Run "diagonstic.py" --> can be used to do a diagonstic analysis, if needed
+3) Run "id_mapping.py" --> to map between GWW and GDW
+4) Run "fix_runoff.py" --> fix runoff of overlapping watersheds
+5) Run "calculate_storage_impact.py" --> to calculate the storage impact
+6) Work on html code 

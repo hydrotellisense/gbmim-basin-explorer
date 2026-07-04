@@ -361,11 +361,11 @@
   <button class="close-page" onclick="showPage('map')">✕ Close</button>
   <h2>GBMIM Reservoir Map</h2>
   <div class="divider"></div>
-  <p class="lead">An interactive hydrological atlas of 765 reservoirs across South and Southeast Asia. Explore watershed boundaries, downstream river networks, runoff timeseries, and storage data.</p>
+  <p class="lead">An interactive hydrological atlas of 772 reservoirs across South and Southeast Asia. Explore watershed boundaries, downstream river networks, runoff timeseries, and storage data.</p>
   <div class="card-grid">
-    <div class="info-card-page"><div class="card-num">765</div><div class="card-label">Reservoirs</div></div>
-    <div class="info-card-page"><div class="card-num">765</div><div class="card-label">Watersheds</div></div>
-    <div class="info-card-page"><div class="card-num">765</div><div class="card-label">Downstream Paths</div></div>
+    <div class="info-card-page"><div class="card-num">772</div><div class="card-label">Reservoirs</div></div>
+    <div class="info-card-page"><div class="card-num">772</div><div class="card-label">Watersheds</div></div>
+    <div class="info-card-page"><div class="card-num">772</div><div class="card-label">Downstream Paths</div></div>
     <div class="info-card-page"><div class="card-num">10</div><div class="card-label">Countries</div></div>
   </div>
   <p class="lead">New here? See the <a href="javascript:void(0)" onclick="showPage('howto')" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent);">How to Use</a> page for a quick tour of every feature.</p>
@@ -545,6 +545,7 @@
           <span>min<span class="ts-stat-val" id="ts-min">–</span></span>
           <span>mean<span class="ts-stat-val" id="ts-mean">–</span></span>
           <span>max<span class="ts-stat-val" id="ts-max">–</span></span>
+          <span style="color:var(--accent);font-family:'Bitter',serif;font-weight:600;" id="ts-unit">m/day</span>
         </div>
         <div class="ts-chart-wrap" id="ts-chart-wrap">
           <div class="ts-yaxis" id="ts-yaxis">
@@ -571,6 +572,7 @@
           <span>min<span class="ts-stat-val" id="st-min">–</span></span>
           <span>mean<span class="ts-stat-val" id="st-mean">–</span></span>
           <span>max<span class="ts-stat-val" id="st-max">–</span></span>
+          <span style="color:var(--accent4);font-family:'Bitter',serif;font-weight:600;">MCM</span>
         </div>
         <div class="ts-chart-wrap">
           <div class="ts-yaxis" id="st-yaxis">
@@ -590,6 +592,7 @@
         <div class="leg-row"><div class="leg-swatch" style="background:var(--accent2);height:8px;border-radius:2px;opacity:.6"></div><span>Watershed</span></div>
         <div class="leg-row"><div class="leg-swatch" style="background:var(--accent3)"></div><span>Downstream path</span></div>
         <div class="leg-row"><div class="leg-swatch" style="background:var(--accent4)"></div><span>Storage data</span></div>
+        <div class="leg-row"><div class="leg-swatch" style="background:var(--accent4);opacity:.5"></div><span>Storage impact (seasonal)</span></div>
         <div class="leg-row"><div class="leg-swatch" style="background:#94a3b8"></div><span>Country border</span></div>
       </div>
 
@@ -655,6 +658,7 @@
         <span>min<span class="ts-stat-val" id="ts-modal-min">–</span></span>
         <span>mean<span class="ts-stat-val" id="ts-modal-mean">–</span></span>
         <span>max<span class="ts-stat-val" id="ts-modal-max">–</span></span>
+        <span class="ts-stat-val" id="ts-modal-unit" style="color:var(--accent);"></span>
       </div>
       <div class="ts-modal-chart-wrap">
         <div class="ts-modal-yaxis">
@@ -851,7 +855,7 @@ function updateMarkerVisibility(){
 // ─────────────────────────────────────────────────
 //  Load coordinates
 // ─────────────────────────────────────────────────
-fetch(GEOJSON_DIR + '/reservoir.json').then(function(r){ return r.json(); }).then(function(data){
+fetch(GEOJSON_DIR + '/reservoir_corrected/reservoir.json').then(function(r){ return r.json(); }).then(function(data){
   RESERVOIRS = data || [];
   addMarkers(RESERVOIRS);
   updateCounts();
@@ -974,6 +978,31 @@ function updateCard(id,res,hasWS,hasDS,hasST,loading){
   var gwwId  =res['gww_id']  ||'';
   var arealRaw=res['Areal_Impact']||res['Areal_Impact (%)']||res['areal_impact']||'';
   var arealVal=arealRaw?String(arealRaw).replace(/%$/,'')+'%':'';
+
+  // Seasonal storage impact block
+  var seasons=[['dry','Dry','#fbbf24'],['pre_monsoon','Pre-Monsoon','#4ade80'],['monsoon','Monsoon','#38bdf8'],['winter','Winter','#a78bfa']];
+  var siVals=seasons.map(function(s){ var v=res[s[0]]; return (v===undefined||v===null)?null:Number(v); });
+  var siAny=siVals.some(function(v){ return v!==null; });
+  var siHtml='';
+  if(siAny){
+    var siMax=Math.max.apply(null,siVals.filter(function(v){return v!==null;}).concat([0]));
+    siHtml='<div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--border);">'+
+      '<div style="font-family:\'Bitter\',serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent4);margin-bottom:7px;">Storage Impact <span style="font-family:\'Inter\';font-size:9px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);">storage / seasonal runoff</span></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+    seasons.forEach(function(s,i){
+      var v=siVals[i];
+      var valStr,barW;
+      if(v===null){ valStr='<span style="color:var(--muted);font-style:italic;font-size:11px;">n/a</span>'; barW=0; }
+      else { var dp=v>=100?0:v>=10?1:2; valStr=v.toFixed(dp); barW=siMax>0?(v/siMax*100):0; }
+      siHtml+='<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;position:relative;overflow:hidden;">'+
+        '<div style="font-family:\'Bitter\',serif;font-size:8.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:'+s[2]+';flex-shrink:0;"></span>'+s[1]+'</div>'+
+        '<div style="font-family:\'Bitter\',serif;font-size:14px;font-weight:700;color:var(--text);line-height:1;">'+valStr+'</div>'+
+        '<div style="position:absolute;bottom:0;left:0;height:2px;background:var(--accent4);opacity:.5;width:'+barW+'%;"></div>'+
+      '</div>';
+    });
+    siHtml+='</div></div>';
+  }
+
   card.innerHTML=
     '<div class="ic-title">Reservoir #'+gwwId+
       '<button class="ic-clear" onclick="clearSelection()">&#10005; Clear</button>'+
@@ -990,7 +1019,8 @@ function updateCard(id,res,hasWS,hasDS,hasST,loading){
       '<span class="badge '+(hasWS?'badge-ws':'badge-none')+'">'+(hasWS?'&#10003; Watershed':'&#10007; No watershed')+'</span> '+
       '<span class="badge '+(hasDS?'badge-ds':'badge-none')+'">'+(hasDS?'&#10003; Downstream':'&#10007; No path')+'</span> '+
       (hasST!==null?'<span class="badge '+(hasST?'badge-st':'badge-none')+'">'+(hasST?'&#10003; Storage':'&#10007; No storage')+'</span>':'')+
-    '</div>';
+    '</div>'+
+    siHtml;
 }
 
 // ─────────────────────────────────────────────────
@@ -1016,7 +1046,7 @@ function renderTimeSeries(){
     minId:'ts-min', meanId:'ts-mean', maxId:'ts-max',
     tooltipId:'ts-tooltip', plotId:'ts-plot',
     stroke: getAccent(), fill: getAccentFill(),
-    isPrecip: metric==='Precip',
+    isPrecip: metric==='Precip', unit:'m/day',
     W:280, H:110
   });
 }
@@ -1053,7 +1083,7 @@ function renderStorageSeries(){
     minId:'st-min', meanId:'st-mean', maxId:'st-max',
     tooltipId:'st-tooltip', plotId:'st-plot',
     stroke: getAccent4(), fill: getAccent4Fill(),
-    isPrecip: true,
+    isPrecip: true, unit:'MCM',
     W:280, H:110
   });
 }
@@ -1119,7 +1149,7 @@ function renderChart(cfg){
     hl.setAttribute('x1',xAt(idx)); hl.setAttribute('x2',xAt(idx)); hl.style.opacity=1;
     hd.setAttribute('cx',xAt(idx)); hd.setAttribute('cy',yAt(v));   hd.style.opacity=1;
     tip.style.left=(xAt(idx)/W*rect.width)+'px'; tip.style.top=(yAt(v)/H*rect.height)+'px';
-    tip.innerHTML='<div style="font-size:12px;font-weight:600;color:var(--text)">'+v.toFixed(dp)+'</div><div style="font-size:9px;color:var(--muted);margin-top:1px">'+dates[idx]+'</div>';
+    tip.innerHTML='<div style="font-size:12px;font-weight:600;color:var(--text)">'+v.toFixed(dp)+(cfg.unit?' <span style="font-size:9px;color:var(--muted)">'+cfg.unit+'</span>':'')+'</div><div style="font-size:9px;color:var(--muted);margin-top:1px">'+dates[idx]+'</div>';
     tip.style.opacity=1;
   };
   plot.onmouseleave=function(){ hl.style.opacity=0; hd.style.opacity=0; tip.style.opacity=0; };
@@ -1202,6 +1232,10 @@ function renderTimeSeriesModal(){
   document.getElementById('ts-modal-y-max').textContent=max.toFixed(dp);
   document.getElementById('ts-modal-y-mid').textContent=((max+min)/2).toFixed(dp);
   document.getElementById('ts-modal-y-min').textContent=min.toFixed(dp);
+  var unitStr=isStorage?'MCM':'m/day';
+  var unitEl=document.getElementById('ts-modal-unit');
+  unitEl.textContent=unitStr;
+  unitEl.style.color=isStorage?getAccent4():getAccent();
   var W=800,H=380,pad=8,n=values.length,range=max-min||1;
   function xAt(i){ return pad+(i/(n-1))*(W-2*pad); }
   function yAt(v){ return H-pad-((v-min)/range)*(H-2*pad); }
@@ -1260,7 +1294,7 @@ function renderTimeSeriesModal(){
     hl.setAttribute('x1',xAt(idx)); hl.setAttribute('x2',xAt(idx)); hl.style.opacity=1;
     hd.setAttribute('cx',xAt(idx)); hd.setAttribute('cy',yAt(v));   hd.style.opacity=1;
     tip.style.left=(xAt(idx)/W*rect.width)+'px'; tip.style.top=(yAt(v)/H*rect.height)+'px';
-    tip.innerHTML='<div class="tt-date">'+dates[idx]+'</div><div class="tt-row"><span class="tt-dot" style="background:'+stroke+'"></span><span class="tt-label">'+metricLabel+':</span><span class="tt-val">'+v.toFixed(dp)+'</span></div>';
+    tip.innerHTML='<div class="tt-date">'+dates[idx]+'</div><div class="tt-row"><span class="tt-dot" style="background:'+stroke+'"></span><span class="tt-label">'+metricLabel+':</span><span class="tt-val">'+v.toFixed(dp)+' '+unitStr+'</span></div>';
     tip.style.opacity=1;
   };
   plot.onmouseleave=function(){ hl.style.opacity=0;hd.style.opacity=0;tip.style.opacity=0; };
