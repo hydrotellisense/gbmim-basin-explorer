@@ -1,22 +1,3 @@
-"""
-generate_geojson.py
--------------------
-Generates per-feature GeoJSON and timeseries files for the GBMIM atlas.
-
-Procedure
----------
-1. Scan storage dir → get authoritative GWW ids (784 files).
-2. For each GWW id, find matching row in gpkg via GWW_reservoir_id column.
-3a. If that row has a valid GDW_ID → use it as canonical feature id.
-3b. If GDW_ID is null → parse GDW_bar_ids; use the first bar id found in a CSV.
-4. Look up canonical id in reservoir CSV then barrier CSV for lat/lng + metadata.
-5. Watershed polygon from the matched gpkg row's geometry.
-6. Runoff timeseries: search runoff_reservoir dir then runoff_barrier dir.
-7. Storage timeseries: keyed by GWW_reservoir_id.
-8. Downstream path: search reservoir downstream dir then barrier dir.
-9. Everything written under geojson/reservoir/.
-"""
-
 import argparse
 import json
 import os
@@ -61,7 +42,6 @@ def parse_args():
 # ---------------------------------------------------------------------------
 
 def norm_id(val) -> str | None:
-    """Strip leading zeros; return None for null/empty."""
     if val is None or (isinstance(val, float) and pd.isna(val)):
         return None
     try:
@@ -72,7 +52,6 @@ def norm_id(val) -> str | None:
 
 
 def parse_bar_ids(raw) -> list[str]:
-    """Parse GDW_bar_ids field (single or comma-separated) into list of norm ids."""
     if raw is None or (isinstance(raw, float) and pd.isna(raw)):
         return []
     parts = str(raw).replace(";", ",").split(",")
@@ -93,7 +72,6 @@ def load_gpkg(gpkg_path: str, layer: str | None) -> gpd.GeoDataFrame:
 
 
 def scan_storage_dir(storage_dir: str) -> dict[str, str]:
-    """Return {gww_id_stripped: filepath} for all Storage_*_apigen.csv files."""
     result = {}
     if not os.path.isdir(storage_dir):
         print(f"  [WARN] Storage dir not found: {storage_dir}")
@@ -109,7 +87,6 @@ def scan_storage_dir(storage_dir: str) -> dict[str, str]:
 
 
 def load_csv_lookup(csv_path: str, label: str) -> dict:
-    """Return {norm_id: pd.Series} for each CSV row."""
     if not os.path.exists(csv_path):
         print(f"  [WARN] {label} CSV not found: {csv_path}")
         return {}

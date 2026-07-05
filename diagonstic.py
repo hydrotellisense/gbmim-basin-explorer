@@ -1,15 +1,3 @@
-"""
-diagnose.py
------------
-Checks the geojson/reservoir/ output folder to verify every feature has:
-  - timeseries_{gww_id}.json  with non-empty Surface, Sub_Surface, Precip
-  - storage_{gww_id}.json     present
-  - watershed_{gww_id}.geojson present
-  - downstream_{gww_id}.geojson present
-
-All files are keyed by GWW_reservoir_id (leading zeros stripped).
-"""
-
 import os
 import json
 import argparse
@@ -26,7 +14,6 @@ def parse_args():
 
 
 def scan_gww_ids(res_dir):
-    """Return sorted list of GWW ids from timeseries_*.json filenames."""
     ids = []
     for name in os.listdir(res_dir):
         if name.startswith("timeseries_") and name.endswith(".json"):
@@ -35,7 +22,6 @@ def scan_gww_ids(res_dir):
 
 
 def load_gww_to_gdw(json_path):
-    """Load reservoir.json and return {gww_id: gdw_id} mapping."""
     if not os.path.exists(json_path):
         return {}
     try:
@@ -48,7 +34,6 @@ def load_gww_to_gdw(json_path):
 
 
 def check_timeseries(path):
-    """Return dict of metric → status string."""
     metrics = ["Surface", "Sub_Surface", "Precip"]
     if not os.path.exists(path):
         return {m: "missing_file" for m in metrics}

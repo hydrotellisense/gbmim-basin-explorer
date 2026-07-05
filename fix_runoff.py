@@ -1,38 +1,3 @@
-"""
-correct_runoff.py
------------------
-Corrects Surface and Sub_Surface runoff for each reservoir by removing
-double-counted contributions from nested and partially-overlapping watersheds.
-
-All spatial work (geometry, area, overlap detection) is done on the merged
-catchment GeoPackages. Timeseries are read from and written to geojson folders.
-
-Pipeline
---------
-1. Load merged catchment GPKGs (barrier first, reservoir for remainder).
-   Project to equal-area CRS, compute polygon area (km²).
-   Build {gww_id: (geometry, area_km2)} via gww_id → GDW_ID → GPKG row.
-
-2. Build overlap graph from GPKG geometries:
-     B fully within A    → A depends on B (subtract full corrected volume of B)
-     B partially in A    → A depends on B (subtract B × intersection_area)
-
-3. Detect and skip circular pairs (duplicate polygons — same physical reservoir
-   with two GWW ids).
-
-4. Topological sort: process innermost/independent reservoirs first.
-
-5. Apply corrections in order:
-     net_vol[t]  = runoff_A[t] × area_A
-                 − Σ corrected_B[t] × area_B          (contained)
-                 − Σ corrected_C[t] × area(A∩C)       (partial)
-     net_area    = area_A − Σ area_B − Σ area(A∩C)
-     corrected_runoff_A[t] = net_vol[t] / net_area
-
-6. Save corrected timeseries_{gww_id}.json to CORRECTED_DIR.
-   Copy all other files (watershed, downstream, storage) unchanged.
-"""
-
 import os
 import json
 import shutil
@@ -55,14 +20,12 @@ METRICS             = ["Surface", "Sub_Surface"]   # Precip not corrected
 # ---------------------------------------------------------------------------
 
 def load_mapping(path):
-    """Return {gww_id: record} from reservoir.json."""
     with open(path) as f:
         records = json.load(f)
     return {str(r["gww_id"]): r for r in records if "gww_id" in r}
 
 
 def load_csv_gdw_ids():
-    """Return set of normalised GDW_IDs from gww_gdw_mapping.csv."""
     import pandas as pd
     if not os.path.exists(MAPPING_CSV):
         raise FileNotFoundError(f"Mapping CSV not found: {MAPPING_CSV}")
@@ -76,11 +39,6 @@ def load_csv_gdw_ids():
             except (ValueError, TypeError):
                 pass
     return ids
-    path = os.path.join(GEOJSON_DIR, f"timeseries_{gww_id}.json")
-    if not os.path.exists(path):
-        return None
-    with open(path) as f:
-        return json.load(f)
 
 
 def align_to_dates(target_dates, source_dates, source_vals):
@@ -101,11 +59,6 @@ def load_timeseries(gww_id):
 
 
 def load_watersheds_from_gpkg(gww_map, csv_gdw_ids):
-    """
-    Load geometries and areas from merged catchment GPKGs.
-    Returns {gww_id: (geometry_epsg4326, area_km2)}.
-    Barrier GPKG has priority; reservoir GPKG fills the rest.
-    """
     # Build GDW_ID → (geometry_ea, area_km2) from both GPKGs
     gdw_to_data = {}   # equal-area geometry for intersection calculations
     gdw_to_geom4326 = {}  # WGS84 geometry for within() checks
@@ -165,12 +118,6 @@ def load_watersheds_from_gpkg(gww_map, csv_gdw_ids):
 # ---------------------------------------------------------------------------
 
 def build_overlap_graph(ws):
-    """
-    ws = {gww_id: (geom_ea, area_km2, geom_4326)}
-    Returns:
-      contained[A] = [(B, area_B)]           B fully within A (WGS84 within check)
-      partial[A]   = [(C, inter_area_km2)]   C partially overlaps A (EA intersection)
-    """
     contained  = defaultdict(list)
     partial    = defaultdict(list)
 
@@ -250,11 +197,6 @@ def remove_circular(contained, partial, gww_map):
 # ---------------------------------------------------------------------------
 
 def topological_sort(all_ids, contained, partial):
-    """
-    Both contained and partial create ordering now:
-    - contained: B inside A → B corrected first
-    - partial:   edges only go larger←smaller, so smaller corrected first
-    """
     deps = {a: set() for a in all_ids}
     for A, pairs in contained.items():
         for B, _ in pairs:
@@ -280,17 +222,6 @@ def topological_sort(all_ids, contained, partial):
 # ---------------------------------------------------------------------------
 
 def correct_all(ws, contained, partial, order, gww_map):
-    """
-    Correction using geometric unions to avoid double-counting:
-
-    - Contained subs: keep only MAXIMAL subs (not inside another sub of A).
-      Subtract their ORIGINAL runoff × full area — original runoff already
-      averages over the whole sub-watershed including its own nested subs,
-      so each area is removed exactly once.
-    - Partial subs: subtract original runoff × area(A∩C minus contained union),
-      clipping out parts already covered by contained subs.
-    - net_area = area_A − area(union of all subtracted geometries).
-    """
     from shapely.ops import unary_union
 
     corrected_cache = {}
