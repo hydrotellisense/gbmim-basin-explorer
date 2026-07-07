@@ -112,11 +112,6 @@ def load_watersheds_from_gpkg(gww_map, csv_gdw_ids):
 
     return result
 
-
-# ---------------------------------------------------------------------------
-# Step 2 — Build overlap graph (on GPKG geometries)
-# ---------------------------------------------------------------------------
-
 def build_overlap_graph(ws):
     contained  = defaultdict(list)
     partial    = defaultdict(list)
@@ -159,10 +154,6 @@ def build_overlap_graph(ws):
     return contained, partial
 
 
-# ---------------------------------------------------------------------------
-# Step 3 — Remove circular/duplicate pairs
-# ---------------------------------------------------------------------------
-
 def remove_circular(contained, partial, gww_map):
     circular = set()
     for A, pairs in list(contained.items()):
@@ -192,10 +183,6 @@ def remove_circular(contained, partial, gww_map):
     return contained, partial
 
 
-# ---------------------------------------------------------------------------
-# Step 4 — Topological sort
-# ---------------------------------------------------------------------------
-
 def topological_sort(all_ids, contained, partial):
     deps = {a: set() for a in all_ids}
     for A, pairs in contained.items():
@@ -217,15 +204,12 @@ def topological_sort(all_ids, contained, partial):
     return order
 
 
-# ---------------------------------------------------------------------------
-# Step 5 — Apply corrections
-# ---------------------------------------------------------------------------
-
 def correct_all(ws, contained, partial, order, gww_map):
     from shapely.ops import unary_union
 
     corrected_cache = {}
-    stats = {"corrected": 0, "unchanged": 0, "skipped": 0, "negative_area": 0}
+    stats = {"corrected": 0, "unchanged": 0, "skipped": 0, "negative_area": 0,
+             "missing_timesteps": 0}
 
     for gww in order:
         main_ts = load_timeseries(gww)
@@ -313,23 +297,48 @@ def correct_all(ws, contained, partial, order, gww_map):
                     continue
                 aligned_p.append((align_to_dates(main_dates, src["dates"], src.get(metric, [])), piece_area))
 
+            # A sub with no value at timestep i contributes nothing to net_vol,
+            # yet its area is already removed from net_area. That inflates the
+            # corrected runoff for those timesteps. Detect and report it, and
+            # attribute the missing sub's share of area back into net_area for
+            # THAT timestep so the per-timestep normalization stays consistent.
             result_vals = []
+            gww_missing = 0
             for i, mv in enumerate(main_vals):
                 if mv is None:
                     result_vals.append(None)
                     continue
 
                 net_vol = mv * area_A
+                missing_area = 0.0
                 for vals, area_B in aligned_c:
                     bv = vals[i]
                     if bv is not None:
                         net_vol -= bv * area_B
+                    else:
+                        missing_area += area_B
+                        gww_missing += 1
                 for vals, piece_area in aligned_p:
                     cv = vals[i]
                     if cv is not None:
                         net_vol -= cv * piece_area
+                    else:
+                        missing_area += piece_area
+                        gww_missing += 1
 
-                result_vals.append(round(net_vol / net_area, 8))
+                # Effective net area for this timestep: give back the area of
+                # any sub that had no data (we couldn't subtract its volume,
+                # so we must not subtract its area either)
+                eff_net_area = net_area + missing_area
+                if eff_net_area <= 0:
+                    result_vals.append(None)
+                    continue
+                result_vals.append(round(net_vol / eff_net_area, 8))
+
+            if gww_missing:
+                stats["missing_timesteps"] += gww_missing
+                print(f"  [WARN] gww={gww} metric={metric}: {gww_missing} "
+                      f"sub-timestep values missing — area credited back per timestep")
 
             new_ts[metric] = result_vals
 
@@ -375,6 +384,7 @@ def main():
     print(f"  Unchanged     : {stats['unchanged']}")
     print(f"  Skipped       : {stats['skipped']}")
     print(f"  Negative area : {stats['negative_area']}")
+    print(f"  Missing sub-timesteps credited back : {stats['missing_timesteps']}")
 
     print(f"\n[6] Writing to {CORRECTED_DIR}/...")
     written = 0

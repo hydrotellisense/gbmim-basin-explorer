@@ -1,27 +1,7 @@
-"""
-storage_impact.py
------------------
-Computes seasonal storage-impact ratio for each reservoir.
-
-For each season and year:
-    S_{y,s}       = mean(storage over the season's months in year y)          [MCM]
-    V_runoff_{y,s} = Σ (Surface + Sub_Surface)(m) × net_area(km²) per month   [MCM]
-    impact_{y,s}  = S_{y,s} / V_runoff_{y,s}
-
-Final per season = mean over years of impact_{y,s}.
-
-Runoff is the corrected runoff (net-of-overlap), so net_area_km2 stored in each
-timeseries JSON is used for the volume conversion.
-
-Outputs (option 1 + 2 + 3):
-  1. Injects dry/pre_monsoon/monsoon/winter into geojson/reservoir_corrected/reservoir.json
-  2. Writes storage_impact_{gww_id}.json per reservoir
-  3. Writes a summary CSV
-"""
-
 import os
 import json
 import argparse
+from calendar import monthrange
 from collections import defaultdict
 
 SEASONS = {
@@ -48,25 +28,19 @@ def load_json(path):
         return json.load(f)
 
 
-def month_of(date_str):
-    # date format "YYYY-MM"
+def parse_ymd(date_str):
+    parts = str(date_str).split("-")
     try:
-        return int(date_str.split("-")[1])
+        return int(parts[0]), int(parts[1])
     except (IndexError, ValueError):
-        return None
+        return None, None
 
 
-def year_of(date_str):
-    try:
-        return int(date_str.split("-")[0])
-    except (IndexError, ValueError):
-        return None
+def days_in_month(year, month):
+    return monthrange(year, month)[1]
 
 
 def compute_impact(runoff_ts, storage_ts):
-    """
-    Returns {season: mean_impact_over_years or None}.
-    """
     if runoff_ts is None or storage_ts is None:
         return {s: None for s in SEASONS}
 
@@ -74,29 +48,27 @@ def compute_impact(runoff_ts, storage_ts):
     if not net_area or net_area <= 0:
         return {s: None for s in SEASONS}
 
-    # Build monthly runoff volume: (Surface + Sub_Surface) × net_area
     surface = runoff_ts.get("Surface", [])
     subsurf = runoff_ts.get("Sub_Surface", [])
     r_dates = runoff_ts.get("dates", [])
 
-    runoff_vol = {}   # (year, month) -> volume MCM
+    runoff_vol = {}
     for i, d in enumerate(r_dates):
-        y, m = year_of(d), month_of(d)
+        y, m = parse_ymd(d)
         if y is None or m is None:
             continue
         sv = surface[i] if i < len(surface) else None
         bv = subsurf[i] if i < len(subsurf) else None
         if sv is None and bv is None:
             continue
-        total = (sv or 0.0) + (bv or 0.0)
-        runoff_vol[(y, m)] = total * net_area
+        total_rate = (sv or 0.0) + (bv or 0.0)      
+        runoff_vol[(y, m)] = total_rate * net_area * days_in_month(y, m) 
 
-    # Build monthly storage
     s_vals  = storage_ts.get("Storage", [])
     s_dates = storage_ts.get("dates", [])
-    storage = {}   # (year, month) -> storage MCM
+    storage = {}  
     for i, d in enumerate(s_dates):
-        y, m = year_of(d), month_of(d)
+        y, m = parse_ymd(d)
         if y is None or m is None:
             continue
         sv = s_vals[i] if i < len(s_vals) else None
@@ -106,7 +78,6 @@ def compute_impact(runoff_ts, storage_ts):
     # Per season, per year
     result = {}
     for season, months in SEASONS.items():
-        # collect years that have both storage & runoff for this season
         years = set()
         for (y, m) in storage:
             if m in months:
@@ -118,11 +89,11 @@ def compute_impact(runoff_ts, storage_ts):
             v_months = [runoff_vol[(y, m)] for m in months if (y, m) in runoff_vol]
             if not s_months or not v_months:
                 continue
-            S_ys = sum(s_months) / len(s_months)      # mean storage
-            V_ys = sum(v_months)                       # total seasonal runoff volume
+            S_ys = sum(s_months) / len(s_months)      # mean storage        [MCM]
+            V_ys = sum(v_months)                       # total seasonal vol  [MCM]
             if V_ys <= 0:
                 continue
-            yearly_impacts.append(S_ys / V_ys)
+            yearly_impacts.append(S_ys / V_ys)         # dimensionless (days)
 
         result[season] = (round(sum(yearly_impacts) / len(yearly_impacts), 6)
                           if yearly_impacts else None)
@@ -156,23 +127,19 @@ def main():
 
         impacts_by_gww[gww] = impact
 
-        # Inject into record (option 1)
         for season, val in impact.items():
             rec[season] = val
         kept_records.append(rec)
 
-        # Per-reservoir file (option 2)
         with open(os.path.join(args.corr_dir, f"storage_impact_{gww}.json"), "w") as f:
             json.dump(impact, f, separators=(",", ":"))
 
         computed += 1
 
-    # Write updated reservoir.json — only reservoirs with data (option 1)
     with open(args.out_json, "w") as f:
         json.dump(kept_records, f, separators=(",", ":"))
     print(f"Updated: {args.out_json}  ({len(kept_records)} records)")
 
-    # Summary CSV — only kept reservoirs (option 3)
     with open(args.out_csv, "w") as f:
         f.write("gww_id,gdw_id,dry,pre_monsoon,monsoon,winter\n")
         for rec in kept_records:

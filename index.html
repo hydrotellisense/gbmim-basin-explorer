@@ -380,8 +380,8 @@
   <div class="howto-grid">
     <div class="howto-card">
       <div class="howto-step">Step 1</div>
-      <div class="howto-title">Find a reservoir by ID</div>
-      <div class="howto-body">Type any part of a numeric ID into the <b>Search</b> field. Matching results appear below — click one to fly to that location and load its data. You can also click any blue marker directly on the map.</div>
+      <div class="howto-title">Find a reservoir by GWW ID</div>
+      <div class="howto-body">Type any part of a <b>GWW ID</b> into the <b>Search</b> field. Matching results appear below — click one to fly to that location and load its data. You can also click any blue marker directly on the map.</div>
     </div>
     <div class="howto-card">
       <div class="howto-step">Step 2</div>
@@ -489,7 +489,7 @@
       </div>
 
       <div class="search-box">
-        <input id="search" type="text" placeholder="Search by ID…" oninput="handleSearch()"/>
+        <input id="search" type="text" placeholder="Search by GWW ID…" oninput="handleSearch()"/>
       </div>
       <div id="search-results"></div>
 
@@ -545,7 +545,7 @@
           <span>min<span class="ts-stat-val" id="ts-min">–</span></span>
           <span>mean<span class="ts-stat-val" id="ts-mean">–</span></span>
           <span>max<span class="ts-stat-val" id="ts-max">–</span></span>
-          <span style="color:var(--accent);font-family:'Bitter',serif;font-weight:600;" id="ts-unit">m/day</span>
+          <span style="color:var(--accent);font-family:'Bitter',serif;font-weight:600;" id="ts-unit">m/month</span>
         </div>
         <div class="ts-chart-wrap" id="ts-chart-wrap">
           <div class="ts-yaxis" id="ts-yaxis">
@@ -834,8 +834,9 @@ function refreshAllMarkerIcons(){
 function addMarkers(data){
   data.forEach(function(r){
     if (markerMap[r.id]) return;
+    var gww = (r.gww_id!==undefined && r.gww_id!==null) ? r.gww_id : r.id;
     var m = L.marker([r.lat,r.lng],{icon:makeIcon(false)})
-      .bindTooltip('Reservoir #'+r.id+'<br/>'+r.lat.toFixed(4)+', '+r.lng.toFixed(4),{direction:'top',offset:[0,-6]})
+      .bindTooltip('Reservoir (GWW #'+gww+')<br/>'+r.lat.toFixed(4)+', '+r.lng.toFixed(4),{direction:'top',offset:[0,-6]})
       .on('click',function(){ selectFeature(r.id); });
     markerMap[r.id] = m;
   });
@@ -867,13 +868,16 @@ fetch(GEOJSON_DIR + '/reservoir_corrected/reservoir.json').then(function(r){ ret
 }).catch(function(e){ console.error('Failed to load reservoir.json:',e); });
 
 // ─────────────────────────────────────────────────
-//  Search
+//  Search — by GWW ID only
 // ─────────────────────────────────────────────────
 function handleSearch(){
   var q=document.getElementById('search').value.toLowerCase().trim();
   var box=document.getElementById('search-results');
   if(!q){ box.innerHTML=''; box.classList.remove('visible'); return; }
-  var results=RESERVOIRS.filter(function(r){ return String(r.id).toLowerCase().includes(q); });
+  var results=RESERVOIRS.filter(function(r){
+    return r.gww_id!==undefined && r.gww_id!==null &&
+           String(r.gww_id).toLowerCase().includes(q);
+  });
   box.innerHTML='';
   if(!results.length){
     box.innerHTML='<div style="padding:8px 14px;font-size:11px;color:var(--muted);">No results</div>';
@@ -881,8 +885,8 @@ function handleSearch(){
     results.slice(0,30).forEach(function(r){
       var div=document.createElement('div');
       div.className='res-item';
-      div.innerHTML='<div class="res-dot"></div><span class="res-id">#'+r.id+'</span><span class="res-coords">'+r.lat.toFixed(4)+', '+r.lng.toFixed(4)+'</span>';
-      (function(id){ div.addEventListener('click',function(){ selectFeature(id); document.getElementById('search').value='#'+id; box.classList.remove('visible'); }); })(r.id);
+      div.innerHTML='<div class="res-dot"></div><span class="res-id">#'+r.gww_id+'</span><span class="res-coords">'+r.lat.toFixed(4)+', '+r.lng.toFixed(4)+'</span>';
+      (function(rec){ div.addEventListener('click',function(){ selectFeature(rec.id); document.getElementById('search').value='#'+rec.gww_id; box.classList.remove('visible'); }); })(r);
       box.appendChild(div);
     });
   }
@@ -964,9 +968,10 @@ function selectFeature(id){
 
 function updateCard(id,res,hasWS,hasDS,hasST,loading){
   var card=document.getElementById('info-card');
+  var gwwLoad = res ? (res.gww_id||id) : id;
   card.className=loading?'active':'active';
   if(loading){
-    card.innerHTML='<div class="ic-title">Reservoir #'+id+'</div><span class="badge badge-loading">&#8635; Loading…</span>';
+    card.innerHTML='<div class="ic-title">Reservoir #'+gwwLoad+'</div><span class="badge badge-loading">&#8635; Loading…</span>';
     return;
   }
   function row(label,val,color){
@@ -1046,7 +1051,7 @@ function renderTimeSeries(){
     minId:'ts-min', meanId:'ts-mean', maxId:'ts-max',
     tooltipId:'ts-tooltip', plotId:'ts-plot',
     stroke: getAccent(), fill: getAccentFill(),
-    isPrecip: metric==='Precip', unit:'m/day',
+    isPrecip: metric==='Precip', unit:'m/month',
     W:280, H:110
   });
 }
@@ -1174,8 +1179,9 @@ function openTsModal(type){
   if(!data) return;
   var modal=document.getElementById('ts-modal');
   var res=RESERVOIRS.find(function(r){ return r.id===activeId; });
+  var gwwTitle = res ? (res.gww_id||activeId) : activeId;
   // Title
-  document.getElementById('ts-modal-title').textContent=(isStorage?'Storage — ':'Runoff — ')+'Reservoir #'+activeId;
+  document.getElementById('ts-modal-title').textContent=(isStorage?'Storage — ':'Runoff — ')+'Reservoir #'+gwwTitle;
   document.getElementById('ts-modal-title').style.color=isStorage?getAccent4():getAccent();
   // Sub
   var subEl=document.getElementById('ts-modal-sub'), parts=[];
@@ -1232,7 +1238,7 @@ function renderTimeSeriesModal(){
   document.getElementById('ts-modal-y-max').textContent=max.toFixed(dp);
   document.getElementById('ts-modal-y-mid').textContent=((max+min)/2).toFixed(dp);
   document.getElementById('ts-modal-y-min').textContent=min.toFixed(dp);
-  var unitStr=isStorage?'MCM':'m/day';
+  var unitStr=isStorage?'MCM':'m/month';
   var unitEl=document.getElementById('ts-modal-unit');
   unitEl.textContent=unitStr;
   unitEl.style.color=isStorage?getAccent4():getAccent();
