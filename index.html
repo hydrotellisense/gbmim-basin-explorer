@@ -345,6 +345,7 @@
     <button class="nav-link" onclick="showPage('home')">Home</button>
     <button class="nav-link" onclick="showPage('howto')">How to Use</button>
     <button class="nav-link" onclick="showPage('details')">Details</button>
+    <button class="nav-link" onclick="showPage('impact')">Storage Impact Trace</button>
     <button class="nav-link" onclick="showPage('contributors')">Contributors</button>
   </div>
   <div class="nav-right">
@@ -455,6 +456,14 @@
     <div class="info-card-page"><div class="card-num">GRanD</div><div class="card-label">Primary Source</div></div>
     <div class="info-card-page"><div class="card-num">v1.1</div><div class="card-label">Dataset Version</div></div>
   </div>
+</div>
+
+<!-- ═══════ IMPACT TRACE ═══════ -->
+<div class="page-overlay" id="page-impact" style="padding:0;">
+  <button class="close-page" onclick="showPage('map')" style="z-index:1200;">✕ Close</button>
+  <iframe id="impact-frame" title="Upstream reservoir impact trace"
+          style="border:0;width:100%;height:100%;display:block;background:var(--bg);"
+          loading="lazy"></iframe>
 </div>
 
 <!-- ═══════ CONTRIBUTORS ═══════ -->
@@ -721,12 +730,16 @@ function toggleTheme(){ applyTheme(getCurrentTheme()==='light'?'dark':'light'); 
 //  Nav
 // ─────────────────────────────────────────────────
 function showPage(name) {
-  ['home','howto','details','contributors'].forEach(function(p){
+  ['home','howto','details','contributors','impact'].forEach(function(p){
     document.getElementById('page-'+p).classList.toggle('visible',p===name);
   });
+  if (name==='impact') {
+    var fr=document.getElementById('impact-frame');
+    if (fr && !fr.getAttribute('src')) fr.setAttribute('src','impact.html');
+  }
   document.querySelectorAll('.nav-link').forEach(function(el){
     var label=el.textContent.toLowerCase().trim();
-    el.classList.toggle('active',label===name||(name==='howto'&&label==='how to use')||(name==='map'&&label==='map'));
+    el.classList.toggle('active',label===name||(name==='howto'&&label==='how to use')||(name==='impact'&&label==='impact trace')||(name==='map'&&label==='map'));
   });
   if (name==='map') setTimeout(function(){ map.invalidateSize(); },50);
 }

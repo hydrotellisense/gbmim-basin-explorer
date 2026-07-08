@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Upstream Reservoir Impact</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg:#f4f7fa; --panel:#ffffff; --line:#e3e9f0; --text:#17222f; --muted:#5f6f80;
+    --water:#6d9bcb;           /* base river network */
+    --water-dim:#d5dfeb;       /* dimmed when a trace is active */
+    --reservoir:#2f7fc0; --barrier:#cf6f3e;
+    --trace:#e08a00;           /* the impacting path: warm amber */
+    --trace-soft:#fbf1dd;
+    --selected:#11304e;        /* the reservoir you tapped */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  #app{display:flex;height:100vh}
+  #map{flex:1;background:var(--bg)}
+  #panel{width:360px;background:var(--panel);border-left:1px solid var(--line);
+    display:flex;flex-direction:column;overflow:hidden}
+  #panel header{padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+  #panel h1{margin:0;font-size:16px;font-weight:650;letter-spacing:.01em}
+  #panel .sub{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
+  #loader{display:none;padding:16px 20px;font-size:13px;border-bottom:1px solid var(--line)}
+  #loader #loadmsg{color:var(--muted);line-height:1.5;margin:0 0 10px}
+  #loader label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);margin:10px 0 4px}
+  #loader input[type=file]{width:100%;font-size:12px;color:var(--muted)}
+  #content{flex:1;overflow-y:auto;padding:16px 20px}
+  .topbar{display:flex;align-items:center;gap:11px;margin:0 0 15px;
+    padding-bottom:13px;border-bottom:1px solid var(--line)}
+  .topbar #reset{margin:0;width:auto;padding:8px 18px}
+  .clearhint{font-size:11.5px;color:var(--muted);line-height:1.35}
+  .target{font-size:15px;font-weight:650;margin:0 0 2px}
+  .target .badge{font-size:10px;text-transform:uppercase;letter-spacing:.05em;
+    padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle}
+  .badge.reservoir{background:rgba(47,127,192,.14);color:var(--reservoir)}
+  .badge.barrier{background:rgba(207,111,62,.16);color:var(--barrier)}
+  .meta{font-size:12px;color:var(--muted);margin:2px 0 16px}
+  .explain{font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--bg);
+    border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 14px}
+  .explain b{color:var(--text)}
+  .explain details{margin-top:9px;border-top:1px solid var(--line);padding-top:8px}
+  .explain summary{cursor:pointer;color:var(--trace);font-weight:600;font-size:12px;list-style:none;outline:none}
+  .explain summary::-webkit-details-marker{display:none}
+  .explain summary::before{content:"› ";font-weight:700}
+  .explain details[open] summary::before{content:"⌄ "}
+  .explain details p{margin:8px 0 0;font-size:12px;line-height:1.55;color:var(--muted)}
+  .sechead{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    margin:0 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .seasons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 12px}
+  .season{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+  .season .sname{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .season .stotal{font-size:20px;font-weight:650;margin-top:4px;line-height:1.05;
+    font-variant-numeric:tabular-nums}
+  .season .stotal .unit{font-size:10px;font-weight:500;color:var(--muted);display:block;margin-top:1px}
+  .season .sbreak{font-size:11px;color:var(--text);margin-top:7px;line-height:1.4}
+  .season .spct{font-size:11px;color:var(--trace);font-weight:600;margin-top:3px}
+  .note{font-size:11px;color:#8a6d1e;line-height:1.45;margin:0 0 14px;
+    padding:8px 11px;background:var(--trace-soft);border-radius:7px}
+  ul.chain{list-style:none;margin:0;padding:0}
+  ul.chain li{display:flex;align-items:baseline;gap:9px;padding:8px 0;
+    border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
+  ul.chain li:hover{color:var(--trace)}
+  ul.chain li .hop{font-size:11px;color:var(--muted);min-width:60px}
+  ul.chain li .rid{font-variant-numeric:tabular-nums;font-weight:600}
+  ul.chain li .dir{font-size:10.5px;color:var(--trace);margin-left:auto}
+  .seasonpick{display:flex;gap:5px;margin:0 0 10px;flex-wrap:wrap}
+  .seasonpick button{font-size:11px;padding:5px 11px;border:1px solid var(--line);
+    background:var(--bg);color:var(--muted);border-radius:20px;cursor:pointer}
+  .seasonpick button.on{background:var(--trace);border-color:var(--trace);color:#fff;font-weight:600}
+  ul.chain li .contrib{font-size:11px;color:var(--muted);margin-left:auto;text-align:right;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  ul.chain li .contrib b{color:var(--trace)}
+  ul.chain li .contrib.exc{color:#b08a2a}
+  .empty{font-size:13px;color:var(--muted);line-height:1.55;padding:8px 0}
+  .hint{font-size:13px;color:var(--muted);line-height:1.55}
+  #reset{margin-top:14px;width:100%;padding:10px;background:var(--bg);color:var(--text);
+    border:1px solid var(--line);border-radius:8px;font-size:12.5px;cursor:pointer;font-weight:500}
+  #reset:hover{border-color:var(--trace);color:var(--trace)}
+  .leaflet-container{background:var(--bg)}
+  @media (max-width:720px){#panel{position:absolute;right:0;top:0;bottom:0;z-index:1000;width:88%;
+    box-shadow:-8px 0 24px rgba(20,40,60,.15)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <aside id="panel">
+    <header>
+      <h1>Upstream reservoir impact</h1>
+      <p class="sub">Tap any reservoir to see how much the reservoirs above it already control the water before it arrives.</p>
+    </header>
+    <div id="loader">
+      <p id="loadmsg"></p>
+      <label>Reservoir points (nodes GeoJSON)</label>
+      <input id="fileNodes" type="file" accept=".geojson,.json" />
+      <label>Connections (edges GeoJSON)</label>
+      <input id="fileEdges" type="file" accept=".geojson,.json" />
+      <label>Reservoir details (reservoir.json)</label>
+      <input id="fileAttrs" type="file" accept=".json" />
+    </div>
+    <div id="content">
+      <p class="hint">Loading the river network…</p>
+    </div>
+  </aside>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* Files load automatically from these paths (served over http, e.g. GitHub Pages).
+   If you open the file directly with no server, the pickers appear as a fallback. */
+const DATA = {
+  nodes: "Graph/reservoir_graph_nodes.geojson",
+  edges: "Graph/reservoir_graph_edges.geojson",
+  attrs: "geojson/reservoir_corrected/reservoir.json",
+};
+const SEASONS=[["dry","Dry"],["pre_monsoon","Pre-monsoon"],["monsoon","Monsoon"],["winter","Winter"]];
+
+let map, edgeLayer, nodeLayer;
+let nodesById = {}, ancestorIndex = {}, attrs = {};
+let selected = null, activeSeason = "dry";
+let traceCtx = null, nodeLayerById = {};
+
+function initMap(){
+  map = L.map("map",{zoomControl:true}).setView([26,90],5);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
+    attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
+  }).addTo(map);
+}
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+
+/* ---- graph logic (unit-tested) ---- */
+function buildAncestorIndex(features){
+  const idx={};
+  for(const f of features){
+    const A=String(f.properties.id), ds=f.properties.downstream||[];
+    ds.forEach((x,pos)=>{ x=String(x); (idx[x]=idx[x]||[]).push({id:A,pos}); });
+  }
+  for(const x in idx) idx[x].sort((a,b)=>a.pos-b.pos);
+  return idx;
+}
+function backtrack(X){
+  X=String(X);
+  const anc=ancestorIndex[X]||[];
+  const ancSet=new Set(anc.map(a=>a.id));
+  const pathNodes=new Set([...ancSet,X]);
+  const immediate=new Set(anc.filter(a=>{
+    const ds=(nodesById[a.id]?.properties.downstream||[]).map(String);
+    return ds[0]===X;
+  }).map(a=>a.id));
+  return {anc,ancSet,pathNodes,immediate};
+}
+
+/* ---- rendering ---- */
+function nodeStyle(f){
+  const t=f.properties.feature_type;
+  return {radius:4,weight:1,color:"#ffffff",
+    fillColor:t==="barrier"?getCss("--barrier"):getCss("--reservoir"),fillOpacity:.95};
+}
+function drawLayers(nodesFC, edgesFC){
+  if(edgeLayer) edgeLayer.remove();
+  if(nodeLayer) nodeLayer.remove();
+  nodeLayerById={};
+  edgeLayer=L.geoJSON(edgesFC,{style:()=>({color:getCss("--water"),weight:1.4,opacity:.8})}).addTo(map);
+  nodeLayer=L.geoJSON(nodesFC,{
+    pointToLayer:(f,ll)=>L.circleMarker(ll,nodeStyle(f)),
+    onEachFeature:(f,layer)=>{
+      layer.featureId=String(f.properties.id);
+      nodeLayerById[layer.featureId]=layer;
+      layer.on("click",()=>select(layer.featureId));
+      layer.bindTooltip(String(f.properties.id),{direction:"top",offset:[0,-4]});
+    }
+  }).addTo(map);
+  try{ map.fitBounds(nodeLayer.getBounds(),{padding:[30,30]}); }catch(e){}
+}
+
+/* Style one node/edge according to the current trace context (traceCtx). */
+function styleNodeForTrace(l){
+  const id=l.featureId;
+  if(!traceCtx){ l.setStyle({...nodeStyle(l.feature),fillOpacity:.95,radius:4,weight:1}); return; }
+  if(id===traceCtx.X){
+    l.setStyle({...nodeStyle(l.feature),radius:7,weight:2,
+      color:"#ffffff",fillColor:getCss("--selected"),fillOpacity:1}); l.bringToFront();
+  }else if(traceCtx.ancSet.has(id)){
+    l.setStyle({...nodeStyle(l.feature),radius:5,weight:2,
+      color:"#ffffff",fillColor:getCss("--trace"),fillOpacity:1}); l.bringToFront();
+  }else{
+    l.setStyle({...nodeStyle(l.feature),fillOpacity:.18,radius:3,weight:0});
+  }
+}
+function edgeOn(l){
+  const p=l.feature.properties;
+  return traceCtx && traceCtx.ancSet.has(String(p.from_id)) && traceCtx.pathNodes.has(String(p.to_id));
+}
+function styleEdgeForTrace(l){
+  if(!traceCtx){ l.setStyle({color:getCss("--water"),weight:1.4,opacity:.8}); return; }
+  l.setStyle(edgeOn(l) ? {color:getCss("--trace"),weight:3,opacity:1}
+                       : {color:getCss("--water-dim"),weight:1,opacity:.6});
+}
+
+function resetHighlight(){
+  selected=null; traceCtx=null;
+  edgeLayer.eachLayer(styleEdgeForTrace);
+  nodeLayer.eachLayer(styleNodeForTrace);
+  renderIdle();
+}
+function select(X){
+  selected=X;
+  const {anc,ancSet,pathNodes,immediate}=backtrack(X);
+  traceCtx={X:String(X),ancSet,pathNodes};
+  edgeLayer.eachLayer(styleEdgeForTrace);
+  nodeLayer.eachLayer(styleNodeForTrace);
+  renderPanel(X,anc,immediate);
+}
+
+/* Emphasise one upstream reservoir (and the path edges touching it) on hover,
+   then restore the trace styling on leave. */
+function hoverReservoir(id, on){
+  id=String(id);
+  const layer=nodeLayerById[id];
+  if(on){
+    if(layer){
+      layer.setStyle({...nodeStyle(layer.feature),radius:9,weight:3,
+        color:"#ffffff",fillColor:getCss("--selected"),fillOpacity:1});
+      layer.bringToFront();
+      layer.openTooltip();
+    }
+    edgeLayer.eachLayer(l=>{
+      const p=l.feature.properties;
+      if((String(p.from_id)===id||String(p.to_id)===id) && edgeOn(l)){
+        l.setStyle({color:getCss("--selected"),weight:5,opacity:1});
+      }
+    });
+  }else{
+    if(layer){ styleNodeForTrace(layer); layer.closeTooltip(); }
+    edgeLayer.eachLayer(styleEdgeForTrace);
+  }
+}
+
+/* ---- numbers ---- */
+function num(v){ if(v==null) return null; const n=Number(v); return isNaN(n)?null:n; }
+function days(x){
+  if(x==null) return "—";
+  const a=Math.abs(x);
+  if(a>=100) return Math.round(x).toLocaleString();
+  if(a>=10)  return (Math.round(x*10)/10).toString();
+  return (Math.round(x*100)/100).toString();
+}
+
+/* Per-season sum-then-divide up the cascade.
+   inherited = total days the upstream reservoirs hold back the water (negatives excluded).
+   share     = inherited / (this reservoir + inherited), only when this reservoir's value is positive. */
+function seasonalTrace(X, anc){
+  const out={};
+  for(const [key] of SEASONS){
+    const own=num(attrs[X]?.[key]);
+    let inherited=0, skipped=0;
+    for(const a of anc){
+      const v=num(attrs[a.id]?.[key]);
+      if(v==null) continue;
+      if(v<0){ skipped++; continue; }
+      inherited+=v;
+    }
+    const base=(own!=null&&own>0?own:0)+inherited;
+    const share=(own!=null&&own>0&&base>0)?inherited/base:null;
+    out[key]={own, inherited, total:base, share, skipped};
+  }
+  return out;
+}
+
+/* Build the upstream list for the active season: each reservoir's own days and its
+   share of the upstream total, ranked biggest-contributor first. */
+function renderUpstreamList(anc, immediate, haveAttrs){
+  if(!haveAttrs){
+    let h=`<ul class="chain">`;
+    for(const a of anc){
+      const dir=immediate.has(a.id)?`<span class="dir">feeds it directly</span>`:"";
+      const steps=a.pos+1;
+      h+=`<li data-id="${a.id}"><span class="hop">${steps} step${steps>1?"s":""} up</span>
+        <span class="rid">${a.id}</span>${dir}</li>`;
+    }
+    return h+`</ul>`;
+  }
+  let inherited=0;
+  const rows=anc.map(a=>{
+    const v=num(attrs[a.id]?.[activeSeason]);
+    const excluded=(v==null||v<0);
+    if(!excluded) inherited+=v;
+    return {id:a.id,pos:a.pos,val:v,excluded};
+  });
+  rows.forEach(r=> r.share=(!r.excluded&&inherited>0)?r.val/inherited:null);
+  rows.sort((x,y)=>(x.excluded?-1:x.val)<(y.excluded?-1:y.val)?1:-1); // biggest first
+
+  let h=`<ul class="chain">`;
+  for(const r of rows){
+    const steps=r.pos+1;
+    const dir=immediate.has(r.id)?" · direct":"";
+    let contrib;
+    if(r.excluded){
+      contrib=`<span class="contrib exc">flagged</span>`;
+    }else{
+      const pct=r.share==null?"—":Math.round(r.share*100)+"%";
+      contrib=`<span class="contrib">${days(r.val)} d · <b>${pct}</b></span>`;
+    }
+    h+=`<li data-id="${r.id}"><span class="hop">${steps} up${dir}</span>
+      <span class="rid">${r.id}</span>${contrib}</li>`;
+  }
+  return h+`</ul>`;
+}
+
+/* ---- panel ---- */
+function renderPanel(X,anc,immediate){
+  const p=nodesById[X].properties;
+  const type=p.feature_type||"reservoir";
+  const haveAttrs=Object.keys(attrs).length>0;
+  const country=attrs[X]?.country;
+
+  let html=`<div class="topbar">
+    <button id="reset">Clear</button>
+    <span class="clearhint">Click Clear to visualize clearly</span>
+  </div>`;
+  html+=`<div class="target">${X}<span class="badge ${type}">${type}</span></div>`;
+  html+=`<div class="meta">`;
+  html+= anc.length>0
+    ? `${anc.length} reservoir${anc.length>1?"s":""} upstream`
+    : `at the top of the river`;
+  if(country) html+=` · ${country}`;
+  html+=`</div>`;
+
+  if(haveAttrs){
+    html+=`<div class="explain">
+      <b>“Days held back” = how much water a reservoir stores compared with how fast the river flows in.</b>
+      A bigger number means the reservoir can delay and smooth the flow more. Each box shows this reservoir on its
+      own, then the total once every reservoir upstream is added in.
+      <details><summary>What does this actually mean?</summary>
+        <p>Picture the river filling a bathtub. “5 days” means it would take about 5 days of the river
+        running in to fill this reservoir — so it holds roughly 5 days’ worth of flow. The water isn’t
+        trapped forever; it still passes through. The number just shows how big the storage is next to
+        the flow, which is how much the reservoir can control it.</p>
+        <p>Seasons differ a lot. In the <b>dry</b> season the river is a trickle, so even modest storage
+        equals many days and the numbers look huge. In the <b>monsoon</b> the river is a torrent, so the
+        same storage is only a few days. It’s the same reservoir — only the amount of water it’s measured
+        against changes.</p>
+        <p>The total adds up every reservoir upstream as if all the water flowed through each one in a single
+        line. Real side-streams join in and dilute this, so treat large totals as an
+        <b>upper estimate</b>, not an exact figure.</p>
+      </details>
+    </div>`;
+
+    const t=seasonalTrace(X,anc);
+    let anySkip=0;
+    html+=`<p class="sechead">How long the water is held back</p><div class="seasons">`;
+    for(const [key,label] of SEASONS){
+      const s=t[key]; anySkip+=s.skipped;
+      const ownTxt = (s.own!=null && s.own<0) ? "flagged" : days(s.own);
+      const shareTxt = s.share==null ? "—" : Math.round(s.share*100)+"%";
+      html+=`<div class="season">
+        <div class="sname">${label}</div>
+        <div class="stotal">${days(s.total)}<span class="unit">days of river flow held back</span></div>
+        <div class="sbreak">This reservoir: ${ownTxt} · upstream reservoirs: ${days(s.inherited)}</div>
+        <div class="spct">${shareTxt} comes from upstream</div>
+      </div>`;
+    }
+    html+=`</div>`;
+    if(anySkip>0) html+=`<p class="note">Some upstream reservoirs had unusable (negative) values and were left out of the totals, so the real figures may be a little higher.</p>`;
+  }
+
+  if(anc.length===0){
+    html+=`<p class="sechead">What’s upstream</p>
+      <p class="empty">Nothing. This reservoir sits at the top of its river, so only the natural river feeds it — no reservoir above it controls its water.</p>`;
+  }else{
+    html+=`<p class="sechead">Which upstream reservoirs hold the most</p>`;
+    if(haveAttrs){
+      html+=`<div class="seasonpick">`;
+      for(const [key,label] of SEASONS){
+        html+=`<button data-season="${key}"${key===activeSeason?' class="on"':''}>${label}</button>`;
+      }
+      html+=`</div>`;
+    }
+    html+=renderUpstreamList(anc,immediate,haveAttrs);
+  }
+  const c=document.getElementById("content");
+  c.innerHTML=html;
+  c.querySelectorAll("ul.chain li").forEach(li=>{
+    li.addEventListener("click",()=>select(li.dataset.id));
+    li.addEventListener("mouseenter",()=>hoverReservoir(li.dataset.id,true));
+    li.addEventListener("mouseleave",()=>hoverReservoir(li.dataset.id,false));
+  });
+  c.querySelectorAll(".seasonpick button").forEach(b=>
+    b.addEventListener("click",()=>{ activeSeason=b.dataset.season; select(X); }));
+  document.getElementById("reset").addEventListener("click",resetHighlight);
+}
+function renderIdle(){
+  document.getElementById("content").innerHTML=
+    `<p class="hint">Tap any reservoir on the map to see which reservoirs upstream control the water reaching it.</p>`;
+}
+
+/* ---- loading ---- */
+function readFile(file){return new Promise((res,rej)=>{
+  const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsText(file);
+});}
+function indexAttrs(arr){
+  attrs={};
+  (Array.isArray(arr)?arr:Object.values(arr)).forEach(r=>{ attrs[String(r.gww_id)]=r; });
+}
+function finishLoad(nodesFC,edgesFC){
+  nodesById={}; nodesFC.features.forEach(f=>nodesById[String(f.properties.id)]=f);
+  ancestorIndex=buildAncestorIndex(nodesFC.features);
+  drawLayers(nodesFC,edgesFC);
+  renderIdle();
+}
+async function autoLoad(){
+  try{
+    const [nodesFC,edgesFC,arr]=await Promise.all([
+      fetch(DATA.nodes).then(r=>{if(!r.ok)throw new Error("nodes");return r.json();}),
+      fetch(DATA.edges).then(r=>{if(!r.ok)throw new Error("edges");return r.json();}),
+      fetch(DATA.attrs).then(r=>r.ok?r.json():null).catch(()=>null),
+    ]);
+    if(arr) indexAttrs(arr);
+    finishLoad(nodesFC,edgesFC);
+  }catch(e){
+    document.getElementById("loader").style.display="block";
+    document.getElementById("loadmsg").textContent=
+      "Couldn’t load the data automatically. If you opened this file directly, serve the folder over http (GitHub Pages or a local server) — or pick the files below.";
+    document.getElementById("content").innerHTML=
+      `<p class="hint">Waiting for data files…</p>`;
+  }
+}
+
+// fallback pickers
+let pendingNodes=null, pendingEdges=null;
+function maybeFinish(){ if(pendingNodes&&pendingEdges) finishLoad(pendingNodes,pendingEdges); }
+document.getElementById("fileNodes").addEventListener("change",async e=>{
+  pendingNodes=JSON.parse(await readFile(e.target.files[0])); maybeFinish();
+});
+document.getElementById("fileEdges").addEventListener("change",async e=>{
+  pendingEdges=JSON.parse(await readFile(e.target.files[0])); maybeFinish();
+});
+document.getElementById("fileAttrs").addEventListener("change",async e=>{
+  indexAttrs(JSON.parse(await readFile(e.target.files[0])));
+  if(selected) select(selected);
+});
+
+initMap();
+autoLoad();
+</script>
+</body>
+</html>
