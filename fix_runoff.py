@@ -46,10 +46,6 @@ def align_to_dates(target_dates, source_dates, source_vals):
     return [src_map.get(d) for d in target_dates]
 
 
-# ---------------------------------------------------------------------------
-# Step 1 — Load watersheds from merged catchment GPKGs
-# ---------------------------------------------------------------------------
-
 def load_timeseries(gww_id):
     path = os.path.join(GEOJSON_DIR, f"timeseries_{gww_id}.json")
     if not os.path.exists(path):
@@ -59,7 +55,6 @@ def load_timeseries(gww_id):
 
 
 def load_watersheds_from_gpkg(gww_map, csv_gdw_ids):
-    # Build GDW_ID → (geometry_ea, area_km2) from both GPKGs
     gdw_to_data = {}   # equal-area geometry for intersection calculations
     gdw_to_geom4326 = {}  # WGS84 geometry for within() checks
 
@@ -140,9 +135,6 @@ def build_overlap_graph(ws):
         if geom_B_4326.within(geom_A_4326):
             contained[A].append((B, area_B))
         else:
-            # Partial overlap: only assign if A is the LARGER watershed.
-            # The larger one is the downstream/parent catchment — it subtracts
-            # the overlap contribution. The smaller keeps its runoff unchanged.
             area_A = ws[A][1]
             if area_A <= area_B:
                 continue
@@ -347,10 +339,6 @@ def correct_all(ws, contained, partial, order, gww_map):
 
     return corrected_cache, stats
 
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 def main():
     os.makedirs(CORRECTED_DIR, exist_ok=True)

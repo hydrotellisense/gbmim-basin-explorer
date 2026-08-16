@@ -4,4 +4,5 @@
 4) Run "fix_runoff.py" --> fix runoff of overlapping watersheds
 5) Run "calculate_storage_impact.py" --> to calculate the storage impact
 6) Run "diagonize_storage" --> to diagonize the storage data
-7) Work on html code 
+7) Run "calculate_downstream_storage_trace_graph.py" --> to run tracing
+8) Work on html code 

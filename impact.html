@@ -3,36 +3,57 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Upstream Reservoir Impact</title>
+<title>Upstream Reservoir Influence & Drawdown Tracing</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root{
     --bg:#f4f7fa; --panel:#ffffff; --line:#e3e9f0; --text:#17222f; --muted:#5f6f80;
-    --water:#6d9bcb;           /* base river network */
-    --water-dim:#d5dfeb;       /* dimmed when a trace is active */
+    --water:#627d96; --water-dim:#cbd5df;
     --reservoir:#2f7fc0; --barrier:#cf6f3e;
-    --trace:#e08a00;           /* the impacting path: warm amber */
-    --trace-soft:#fbf1dd;
-    --selected:#11304e;        /* the reservoir you tapped */
+    --trace:#e08a00; --trace-soft:#fbf1dd; --selected:#11304e;
+    --draw:#b9533b; --fill:#2f7f68;
+    --question:#f7f9fc; --question-border:#d9e1ea; --family:#5f8fb3; --family-fill:rgba(95,143,179,.09);
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
   #app{display:flex;height:100vh}
   #map{flex:1;background:var(--bg)}
-  #panel{width:360px;background:var(--panel);border-left:1px solid var(--line);
-    display:flex;flex-direction:column;overflow:hidden}
+  #panel{width:400px;min-width:320px;max-width:620px;background:var(--panel);border-left:1px solid var(--line);
+    display:flex;flex-direction:column;overflow:hidden;position:relative}
+  #panelResizeHandle{
+    position:absolute;left:-5px;top:0;bottom:0;width:10px;z-index:1200;
+    cursor:col-resize;touch-action:none;
+  }
+  #panelResizeHandle::before{
+    content:"";position:absolute;left:4px;top:0;bottom:0;width:2px;
+    background:transparent;transition:background .15s ease;
+  }
+  #panelResizeHandle:hover::before,
+  #panelResizeHandle.dragging::before{
+    background:#7fa7c3;
+  }
+  body.resizing-panel{
+    cursor:col-resize !important;
+    user-select:none !important;
+  }
+  body.resizing-panel *{
+    cursor:col-resize !important;
+  }
   #panel header{padding:18px 20px 14px;border-bottom:1px solid var(--line)}
   #panel h1{margin:0;font-size:16px;font-weight:650;letter-spacing:.01em}
   #panel .sub{margin:5px 0 0;font-size:12.5px;color:var(--muted);line-height:1.45}
   #loader{display:none;padding:16px 20px;font-size:13px;border-bottom:1px solid var(--line)}
   #loader #loadmsg{color:var(--muted);line-height:1.5;margin:0 0 10px}
-  #loader label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
-    color:var(--muted);margin:10px 0 4px}
-  #loader input[type=file]{width:100%;font-size:12px;color:var(--muted)}
   #content{flex:1;overflow-y:auto;padding:16px 20px}
   .topbar{display:flex;align-items:center;gap:11px;margin:0 0 15px;
     padding-bottom:13px;border-bottom:1px solid var(--line)}
+  .helpLink{
+    margin-left:auto;font-size:11px;font-weight:650;color:var(--trace);
+    text-decoration:none;border:1px solid var(--line);background:var(--bg);
+    padding:7px 9px;border-radius:7px;white-space:nowrap;
+  }
+  .helpLink:hover{border-color:var(--trace);background:#fff}
   .topbar #reset{margin:0;width:auto;padding:8px 18px}
   .clearhint{font-size:11.5px;color:var(--muted);line-height:1.35}
   .target{font-size:15px;font-weight:650;margin:0 0 2px}
@@ -40,7 +61,71 @@
     padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle}
   .badge.reservoir{background:rgba(47,127,192,.14);color:var(--reservoir)}
   .badge.barrier{background:rgba(207,111,62,.16);color:var(--barrier)}
-  .meta{font-size:12px;color:var(--muted);margin:2px 0 16px}
+  .meta{font-size:12px;color:var(--muted);margin:2px 0 13px}
+  .controls{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+  .controls label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .controls select{border:1px solid var(--line);background:var(--bg);color:var(--text);
+    border-radius:7px;padding:6px 8px;font-size:12px}
+  .time-controls{background:var(--bg);border:1px solid var(--line);border-radius:10px;
+    padding:10px 11px;margin:0 0 12px}
+  .time-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .time-row + .time-row{margin-top:8px}
+  .time-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+    min-width:43px}
+  .selectionbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px;margin:0 0 12px;background:#f7f9fc;border:1px solid var(--line);border-radius:10px}
+  .selectionbar .who{font-size:12px;color:var(--muted);line-height:1.35}
+  .selectionbar .who b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}
+  .selectionbar .count{font-size:11px;color:var(--muted);white-space:nowrap}
+  .keyquestions{display:block;margin:0 0 12px}
+  .qcard{background:#fff;border:1px solid var(--question-border);border-radius:12px;
+    padding:14px 14px 13px;margin:0 0 10px;cursor:default;position:relative;overflow:hidden}
+  .qcard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--reservoir)}
+  .qcard.drawcard:before{background:var(--draw)}
+  .qcard.has-source{cursor:pointer}
+  .qcard.has-source:hover{border-color:#b9c8d7;box-shadow:0 3px 12px rgba(26,49,72,.08)}
+  .qnum{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:750}
+  .qtitle{font-size:13px;font-weight:700;line-height:1.35;color:var(--text);margin-top:3px}
+  .answerrow{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:10px}
+  .qanswer{font-size:28px;font-weight:750;line-height:.95;font-variant-numeric:tabular-nums;color:var(--selected)}
+  .qanswer.draw{color:var(--draw)}
+  .answerstate{font-size:10.5px;font-weight:700;padding:4px 7px;border-radius:12px;background:#eef4f8;color:#49677f}
+  .answerstate.draw{background:#fbeeea;color:var(--draw)}
+  .answerstate.fill{background:#eaf5f0;color:var(--fill)}
+  .plainresult{font-size:12px;line-height:1.5;color:var(--text);margin-top:10px}
+  .plainresult strong{font-weight:750}
+  .factrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .fact{font-size:10.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
+    border-radius:14px;padding:4px 7px;white-space:nowrap}
+  .fact b{color:var(--text)}
+  .qhint{font-size:10px;color:var(--trace);font-weight:650;margin-top:8px}
+  .guardrail{font-size:11px;line-height:1.45;color:#775f20;background:#fff8e8;border:1px solid #f0dfae;
+    border-radius:9px;padding:8px 10px;margin:0 0 12px}
+  .contextbox{font-size:11.5px;line-height:1.5;color:var(--muted);background:#eef5fa;
+    border:1px solid #d7e7f2;border-radius:10px;padding:10px 12px;margin:0 0 12px}
+  .contextbox b{color:var(--text)}
+  .contextbox .definition{margin-top:6px}
+  .sectiontitle{font-size:12px;font-weight:750;color:var(--text);margin:2px 0 9px}
+  .source-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:7px}
+  .source-name{font-size:13px;font-weight:750;color:var(--text)}
+  .source-relation{font-size:10px;color:var(--muted);background:var(--bg);border:1px solid var(--line);
+    border-radius:12px;padding:3px 7px;white-space:nowrap}
+  .source-main{font-size:12px;line-height:1.45;color:var(--text);margin-bottom:6px}
+  .source-main .up{color:var(--fill);font-weight:750}
+  .source-main .down{color:var(--draw);font-weight:750}
+  .source-detail{font-size:11px;line-height:1.5;color:var(--muted)}
+  .source-detail b{color:var(--text)}
+  .season-story{font-size:11.5px;line-height:1.5;color:var(--text);margin-top:7px}
+  .season-story .muted{color:var(--muted)}
+  details.paneldrop{border:1px solid var(--line);border-radius:9px;background:#fff;margin:0 0 10px;overflow:hidden}
+  details.paneldrop summary{cursor:pointer;list-style:none;padding:10px 12px;font-size:12px;font-weight:650;
+    color:var(--text);background:var(--bg);display:flex;align-items:center;justify-content:space-between}
+  details.paneldrop summary::-webkit-details-marker{display:none}
+  details.paneldrop summary:after{content:"+";font-size:16px;color:var(--muted);font-weight:500}
+  details.paneldrop[open] summary:after{content:"−"}
+  details.paneldrop .dropbody{padding:10px 12px;font-size:11.5px;color:var(--muted);line-height:1.5}
+  details.paneldrop .dropbody p{margin:0 0 8px}
+  details.paneldrop .dropbody p:last-child{margin-bottom:0}
   .explain{font-size:12.5px;color:var(--muted);line-height:1.5;background:var(--bg);
     border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:0 0 14px}
   .explain b{color:var(--text)}
@@ -55,86 +140,414 @@
   .seasons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:0 0 12px}
   .season{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
   .season .sname{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-  .season .stotal{font-size:20px;font-weight:650;margin-top:4px;line-height:1.05;
+  .season .stotal{font-size:19px;font-weight:650;margin-top:4px;line-height:1.05;
     font-variant-numeric:tabular-nums}
-  .season .stotal .unit{font-size:10px;font-weight:500;color:var(--muted);display:block;margin-top:1px}
-  .season .sbreak{font-size:11px;color:var(--text);margin-top:7px;line-height:1.4}
-  .season .spct{font-size:11px;color:var(--trace);font-weight:600;margin-top:3px}
+  .season .stotal .unit{font-size:10px;font-weight:500;color:var(--muted);display:block;margin-top:2px}
+  .season .sbreak{font-size:11px;color:var(--text);margin-top:7px;line-height:1.45}
+  .season .spct{font-size:11px;color:var(--trace);font-weight:600;margin-top:4px}
+  .season .draw{color:var(--draw)}
+  .season .fill{color:var(--fill)}
   .note{font-size:11px;color:#8a6d1e;line-height:1.45;margin:0 0 14px;
     padding:8px 11px;background:var(--trace-soft);border-radius:7px}
-  ul.chain{list-style:none;margin:0;padding:0}
-  ul.chain li{display:flex;align-items:baseline;gap:9px;padding:8px 0;
-    border-bottom:1px solid var(--line);font-size:13px;cursor:pointer}
-  ul.chain li:hover{color:var(--trace)}
-  ul.chain li .hop{font-size:11px;color:var(--muted);min-width:60px}
-  ul.chain li .rid{font-variant-numeric:tabular-nums;font-weight:600}
-  ul.chain li .dir{font-size:10.5px;color:var(--trace);margin-left:auto}
   .seasonpick{display:flex;gap:5px;margin:0 0 10px;flex-wrap:wrap}
   .seasonpick button{font-size:11px;padding:5px 11px;border:1px solid var(--line);
     background:var(--bg);color:var(--muted);border-radius:20px;cursor:pointer}
   .seasonpick button.on{background:var(--trace);border-color:var(--trace);color:#fff;font-weight:600}
-  ul.chain li .contrib{font-size:11px;color:var(--muted);margin-left:auto;text-align:right;
-    font-variant-numeric:tabular-nums;white-space:nowrap}
-  ul.chain li .contrib b{color:var(--trace)}
-  ul.chain li .contrib.exc{color:#b08a2a}
+  ul.chain{list-style:none;margin:0;padding:0}
+  ul.chain li{display:block;padding:10px 11px;margin:0 0 8px;border:1px solid var(--line);
+    background:#fff;border-radius:9px;font-size:13px;cursor:pointer}
+  ul.chain li:hover{border-color:#b8c9d7;background:#fbfdff}
+  ul.chain li:last-child{margin-bottom:0}
   .empty{font-size:13px;color:var(--muted);line-height:1.55;padding:8px 0}
   .hint{font-size:13px;color:var(--muted);line-height:1.55}
+  .error{font-size:12px;color:#9b3d2d;line-height:1.5;padding:9px 11px;background:#fff2ef;border-radius:7px}
   #reset{margin-top:14px;width:100%;padding:10px;background:var(--bg);color:var(--text);
     border:1px solid var(--line);border-radius:8px;font-size:12.5px;cursor:pointer;font-weight:500}
   #reset:hover{border-color:var(--trace);color:var(--trace)}
   .leaflet-container{background:var(--bg)}
-  @media (max-width:720px){#panel{position:absolute;right:0;top:0;bottom:0;z-index:1000;width:88%;
+  .maplegend{background:rgba(255,255,255,.94);border:1px solid rgba(100,120,140,.22);
+    border-radius:8px;padding:8px 10px;font-size:10.5px;line-height:1.55;color:var(--muted);
+    box-shadow:0 1px 6px rgba(20,40,60,.10)}
+  .maplegend b{color:var(--text)}
+  .legend-system{display:inline-block;width:22px;height:13px;border-radius:10px;
+    border:2px solid var(--family);background:var(--family-fill);
+    vertical-align:-3px;margin-right:6px}
+  .legend-edge{display:inline-block;width:22px;border-top:2px dashed var(--water);
+    vertical-align:3px;margin-right:5px;position:relative}
+  .legend-edge:after{content:"›";position:absolute;right:-2px;top:-10px;color:var(--water);
+    font-size:16px;font-weight:800}
+  @media (max-width:720px){
+    #panelResizeHandle{display:none}
+    #panel{position:absolute;right:0;top:0;bottom:0;z-index:1000;width:92% !important;min-width:0;max-width:none;
     box-shadow:-8px 0 24px rgba(20,40,60,.15)}}
+
+  .appPage{display:none}
+  .appPage.active{display:block}
+  #dashboardPage.active{height:100vh}
+  #helpPage{
+    min-height:100vh;
+    background:var(--bg);
+    color:var(--text);
+    overflow:auto;
+  }
+  .helpWrap{
+    max-width:900px;
+    margin:0 auto;
+    padding:32px 22px 60px;
+  }
+  .helpHero,
+  .helpCard{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+  }
+  .helpHero{
+    padding:24px 26px;
+    margin-bottom:16px;
+  }
+  .helpHero h1{
+    font-size:24px;
+    margin:0 0 8px;
+  }
+  .helpLead{
+    font-size:14px;
+    color:var(--muted);
+    line-height:1.55;
+    margin:0;
+  }
+  .helpCard{
+    padding:18px 20px;
+    margin:12px 0;
+  }
+  .helpCard h2{
+    font-size:16px;
+    margin:0 0 10px;
+  }
+  .helpCard h3{
+    font-size:13px;
+    margin:16px 0 6px;
+  }
+  .helpCard p{
+    font-size:13px;
+    margin:7px 0;
+    color:var(--muted);
+    line-height:1.55;
+  }
+  .helpExample{
+    background:#eef5fa;
+    border-left:3px solid #5f8fb3;
+    padding:10px 12px;
+    border-radius:7px;
+    margin:10px 0;
+    font-size:13px;
+    line-height:1.5;
+  }
+  .helpWarning{
+    background:#fff8e8;
+    border:1px solid #f0dfae;
+    border-radius:9px;
+    padding:11px 13px;
+    margin-top:10px;
+    font-size:12px;
+    color:#6d5a27;
+    line-height:1.5;
+  }
+  .helpTerm{
+    display:grid;
+    grid-template-columns:190px 1fr;
+    gap:12px;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .helpTerm:last-child{border-bottom:0}
+  .helpTerm .name{
+    font-size:12px;
+    font-weight:700;
+  }
+  .helpTerm .desc{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .helpBack{
+    display:inline-block;
+    margin-top:12px;
+    color:var(--trace);
+    font-size:12px;
+    font-weight:700;
+    text-decoration:none;
+    border:1px solid var(--line);
+    background:var(--bg);
+    padding:8px 10px;
+    border-radius:7px;
+  }
+  .helpBack:hover{
+    border-color:var(--trace);
+    background:#fff;
+  }
+  .helpMapKey{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin:8px 0;
+    font-size:12px;
+    color:var(--muted);
+  }
+  .helpCircle{
+    width:36px;
+    height:24px;
+    border-radius:50%;
+    border:2px solid #5f8fb3;
+    background:rgba(185,217,238,.45);
+    flex:none;
+  }
+  .helpArrow{
+    font-size:22px;
+    color:#627d96;
+    width:36px;
+    text-align:center;
+    flex:none;
+  }
+  @media(max-width:650px){
+    .helpTerm{grid-template-columns:1fr;gap:3px}
+    .helpWrap{padding:18px 12px 40px}
+  }
+
 </style>
 </head>
 <body>
+<section id="dashboardPage" class="appPage active">
 <div id="app">
   <div id="map"></div>
   <aside id="panel">
+    <div id="panelResizeHandle" title="Drag left or right to resize"></div>
     <header>
-      <h1>Upstream reservoir impact</h1>
-      <p class="sub">Tap any reservoir to see how much the reservoirs above it already control the water before it arrives.</p>
+      <h1>What is happening upstream?</h1>
+      <p class="sub">Choose a reservoir, year, and season. The dashboard explains which upstream reservoir changed its stored water the most and which one lost the most stored water.</p>
     </header>
     <div id="loader">
       <p id="loadmsg"></p>
-      <label>Reservoir points (nodes GeoJSON)</label>
-      <input id="fileNodes" type="file" accept=".geojson,.json" />
-      <label>Connections (edges GeoJSON)</label>
-      <input id="fileEdges" type="file" accept=".geojson,.json" />
-      <label>Reservoir details (reservoir.json)</label>
-      <input id="fileAttrs" type="file" accept=".json" />
     </div>
     <div id="content">
-      <p class="hint">Loading the river network…</p>
+      <p class="hint">Loading the reservoir network…</p>
     </div>
   </aside>
 </div>
+</section>
+
+<section id="helpPage" class="appPage">
+  <div class="helpWrap">
+    <div class="helpHero">
+      <h1>How to read this dashboard</h1>
+      <p class="helpLead">
+        This page explains the two main questions, the map, and the percentages in plain language.
+      </p>
+      <a class="helpBack" href="#dashboard">← Back to dashboard</a>
+    </div>
+
+    <div class="helpCard">
+      <h2>The two main questions</h2>
+
+      <h3>1. Which upstream reservoir had the strongest overall storage influence?</h3>
+      <p>
+        This finds the upstream reservoir with the largest seasonal change in stored water,
+        whether its storage increased or decreased.
+      </p>
+
+      <div class="helpExample">
+        If a reservoir ends the season with <b>90 million m³ more stored water</b>,
+        that suggests more water remained stored upstream and may have reduced downstream flow.
+      </div>
+
+      <h3>2. Which upstream reservoir may have added the most stored water to downstream flow?</h3>
+      <p>
+        This looks only at upstream reservoirs whose stored water decreased during the season.
+        The reservoir with the largest decrease is highlighted.
+      </p>
+
+      <div class="helpExample">
+        If a reservoir ends the season with <b>120 million m³ less stored water</b>,
+        it shows the strongest potential for previously stored water to have been added back to the downstream river system.
+      </div>
+
+      <div class="helpWarning">
+        A storage decrease does <b>not</b> prove that a gate was opened.
+        Gate-release observations are not available, so this dashboard shows potential downstream addition of stored water,
+        not measured release volume.
+      </div>
+    </div>
+
+    <div class="helpCard">
+      <h2>Key terms</h2>
+
+      <div class="helpTerm">
+        <div class="name">Stored water</div>
+        <div class="desc">
+          Water held in a reservoir. A seasonal increase means it ended with more stored water;
+          a decrease means it ended with less.
+        </div>
+      </div>
+
+      <div class="helpTerm">
+        <div class="name">Million m³ / MCM</div>
+        <div class="desc">
+          <b>1 MCM = 1 million cubic meters of water.</b>
+          The dashboard mainly writes this as “million m³” to make the unit easier to understand.
+        </div>
+      </div>
+
+      <div class="helpTerm">
+        <div class="name">Seasonal watershed runoff</div>
+        <div class="desc">
+          All modeled runoff generated across the complete drainage area feeding the reservoir you selected
+          during the chosen season.
+        </div>
+      </div>
+
+      <div class="helpTerm">
+        <div class="name">Storage change as % of watershed runoff</div>
+        <div class="desc">
+          Compares how much a reservoir's storage changed with the amount of runoff generated across
+          the selected reservoir's full watershed during the same season.
+        </div>
+      </div>
+
+      <div class="helpTerm">
+        <div class="name">Watershed-runoff coverage</div>
+        <div class="desc">
+          Shows how much of the selected reservoir's runoff is generated inside the drainage area
+          above a particular upstream reservoir.
+        </div>
+      </div>
+    </div>
+
+    <div class="helpCard">
+      <h2>Why compare storage change with watershed runoff?</h2>
+
+      <p>
+        A storage change by itself can be hard to interpret. The same 100 million m³ can be very large
+        in a small basin but relatively small in a very large river system.
+      </p>
+
+      <div class="helpExample">
+        If a reservoir's storage changes by <b>90 million m³</b> and that equals
+        <b>37% of the selected watershed's seasonal runoff</b>, the storage change was large compared
+        with the amount of water generated across that watershed during the season.
+      </div>
+
+      <p>
+        A larger percentage therefore means the reservoir's storage behavior was more substantial
+        relative to the amount of water available in the downstream watershed.
+      </p>
+    </div>
+
+    <div class="helpCard">
+      <h2>How to read runoff coverage</h2>
+
+      <div class="helpExample">
+        <b>Runoff coverage = 70%</b> means about 70% of the runoff generated above the selected reservoir
+        comes from the drainage area located upstream of that source reservoir.
+      </div>
+
+      <div class="helpWarning">
+        Do <b>not</b> add runoff-coverage percentages from different upstream reservoirs.
+        Their watersheds may be nested inside one another, so the percentages overlap.
+      </div>
+    </div>
+
+    <div class="helpCard">
+      <h2>How to read the map</h2>
+
+      <div class="helpMapKey">
+        <div class="helpCircle"></div>
+        <div><b>Light-blue circle:</b> one connected upstream–downstream reservoir system.</div>
+      </div>
+
+      <div class="helpMapKey">
+        <div class="helpArrow">→</div>
+        <div><b>Arrow:</b> points in the downstream direction.</div>
+      </div>
+
+      <p>
+        Selecting a reservoir highlights the connected upstream path used for the comparison.
+      </p>
+    </div>
+
+    <div class="helpCard">
+      <h2>Simple interpretation</h2>
+
+      <p><b>Storage increased:</b> more water remained stored in the reservoir by the end of the season, which may have reduced water moving downstream.</p>
+
+      <p><b>Storage decreased:</b> the reservoir ended with less stored water, which may indicate that previously stored water was added back to the downstream river system.</p>
+
+      <p><b>Larger runoff percentage:</b> the storage change was large relative to the amount of runoff generated in the selected downstream watershed.</p>
+
+      <p><b>Larger runoff coverage:</b> a larger share of the selected reservoir's watershed runoff originates in the drainage area above that upstream reservoir.</p>
+    </div>
+
+    <a class="helpBack" href="#dashboard">← Back to dashboard</a>
+  </div>
+</section>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
 <script>
-/* Files load automatically from these paths (served over http, e.g. GitHub Pages).
-   If you open the file directly with no server, the pickers appear as a fallback. */
+/* Use the files exactly where the project workflow saves them.
+   Start the web server from the project root ("Hydrology Website") so these
+   relative paths resolve directly. */
 const DATA = {
   nodes: "Graph/reservoir_graph_nodes.geojson",
   edges: "Graph/reservoir_graph_edges.geojson",
   attrs: "geojson/reservoir_corrected/reservoir.json",
+  traceBase: "geojson/reservoir_corrected/downstream_storage_trace_"
 };
-const SEASONS=[["dry","Dry"],["pre_monsoon","Pre-monsoon"],["monsoon","Monsoon"],["winter","Winter"]];
 
-let map, edgeLayer, nodeLayer;
+const SEASONS = [
+  ["dry","Dry"],
+  ["pre_monsoon","Pre-monsoon"],
+  ["monsoon","Monsoon"],
+  ["winter","Winter"]
+];
+
+let map, edgeLayer, arrowLayer, familyLayer, nodeLayer;
 let nodesById = {}, ancestorIndex = {}, attrs = {};
-let selected = null, activeSeason = "dry";
+let selected = null, activeSeason = "monsoon", activeYear = null;
 let traceCtx = null, nodeLayerById = {};
+let targetCache = {};
+let panelWidth = 400;
+let familyById = {}, familyMembers = {}, familyShapeById = {};
 
 function initMap(){
   map = L.map("map",{zoomControl:true}).setView([26,90],5);
   L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
     attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
   }).addTo(map);
-}
-function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
 
-/* ---- graph logic (unit-tested) ---- */
+  const legend=L.control({position:"bottomleft"});
+  legend.onAdd=()=>{
+    const d=L.DomUtil.create("div","maplegend");
+    d.innerHTML=`<b>Network</b><br>
+      <span class="legend-system"></span>light-blue circle = one connected reservoir family<br>
+      <span class="legend-edge"></span>arrow points downstream`;
+    return d;
+  };
+  legend.addTo(map);
+}
+
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function num(v){ if(v==null || v==="") return null; const n=Number(v); return Number.isFinite(n)?n:null; }
+function fmt(v,d=2){ const n=num(v); return n==null?"—":n.toLocaleString(undefined,{maximumFractionDigits:d}); }
+function signed(v,d=2){ const n=num(v); if(n==null) return "—"; return `${n>0?"+":""}${fmt(n,d)}`; }
+function pct(v,d=1){ const n=num(v); return n==null?"—":`${signed(n,d)}%`; }
+function absPct(v,d=1){ const n=num(v); return n==null?"—":`${fmt(Math.abs(n),d)}%`; }
+function waterVol(v,d=1){
+  const n=num(v);
+  return n==null ? "—" : `${fmt(Math.abs(n),d)} million m³`;
+}
+function signClass(v){ const n=num(v); return n==null?"":(n<0?"draw":(n>0?"fill":"")); }
+function signWord(v){ const n=num(v); return n==null?"no data":(n<0?"net drawdown":(n>0?"net filling":"no net storage change")); }
+
+/* ---- graph logic: same convention as previous HTML ---- */
 function buildAncestorIndex(features){
   const idx={};
   for(const f of features){
@@ -144,6 +557,7 @@ function buildAncestorIndex(features){
   for(const x in idx) idx[x].sort((a,b)=>a.pos-b.pos);
   return idx;
 }
+
 function backtrack(X){
   X=String(X);
   const anc=ancestorIndex[X]||[];
@@ -156,298 +570,821 @@ function backtrack(X){
   return {anc,ancSet,pathNodes,immediate};
 }
 
-/* ---- rendering ---- */
+/* ---- persistent parent-child system grouping ----
+   A direct relationship is source -> source.properties.downstream[0].
+   Each connected component is shown as ONE translucent blue system boundary. */
+function buildFamilyIndex(features){
+  const adj={};
+  for(const f of features){
+    const id=String(f.properties.id);
+    adj[id]=adj[id]||new Set();
+  }
+  for(const f of features){
+    const id=String(f.properties.id);
+    const ds=(f.properties.downstream||[]).map(String);
+    if(!ds.length || !nodesById[ds[0]]) continue;
+    const child=ds[0];
+    adj[id].add(child);
+    adj[child]=adj[child]||new Set();
+    adj[child].add(id);
+  }
+
+  familyById={};
+  familyMembers={};
+  const seen=new Set();
+  let familyNo=0;
+
+  for(const id of Object.keys(adj)){
+    if(seen.has(id) || adj[id].size===0) continue;
+    const stack=[id], members=[];
+    seen.add(id);
+
+    while(stack.length){
+      const cur=stack.pop();
+      members.push(cur);
+      for(const nxt of adj[cur]){
+        if(!seen.has(nxt)){
+          seen.add(nxt);
+          stack.push(nxt);
+        }
+      }
+    }
+
+    if(members.length<2) continue;
+    const fam=`family_${familyNo++}`;
+    familyMembers[fam]=members;
+    for(const m of members) familyById[m]=fam;
+  }
+}
+
+function convexHull(points){
+  if(points.length<=2) return points.slice();
+  const pts=points.slice().sort((a,b)=>a[0]-b[0] || a[1]-b[1]);
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+
+  const lower=[];
+  for(const p of pts){
+    while(lower.length>=2 && cross(lower[lower.length-2],lower[lower.length-1],p)<=0) lower.pop();
+    lower.push(p);
+  }
+
+  const upper=[];
+  for(let i=pts.length-1;i>=0;i--){
+    const p=pts[i];
+    while(upper.length>=2 && cross(upper[upper.length-2],upper[upper.length-1],p)<=0) upper.pop();
+    upper.push(p);
+  }
+
+  lower.pop(); upper.pop();
+  return lower.concat(upper);
+}
+
+function nodeLatLng(id){
+  const f=nodesById[id];
+  if(!f || f.geometry?.type!=="Point") return null;
+  const [lng,lat]=f.geometry.coordinates;
+  return L.latLng(lat,lng);
+}
+
+function drawFamilySystems(){
+  if(familyLayer) familyLayer.remove();
+  familyShapeById={};
+  familyLayer=L.layerGroup().addTo(map);
+
+  for(const [fam,members] of Object.entries(familyMembers)){
+    const ll=members.map(nodeLatLng).filter(Boolean);
+    if(ll.length<2) continue;
+
+    // One simple light-blue filled circle around the whole connected family.
+    const center=L.latLng(
+      ll.reduce((sum,p)=>sum+p.lat,0)/ll.length,
+      ll.reduce((sum,p)=>sum+p.lng,0)/ll.length
+    );
+
+    let radius=0;
+    for(const p of ll) radius=Math.max(radius,center.distanceTo(p));
+    radius=Math.max(radius*1.16,22000); // small padding around outer nodes
+
+    const shape=L.circle(center,{
+      radius,
+      color:getCss("--family"),
+      weight:2,
+      opacity:.42,
+      fillColor:"#b9d9ee",
+      fillOpacity:.16,
+      interactive:false
+    });
+
+    shape.addTo(familyLayer);
+    familyShapeById[fam]=shape;
+  }
+
+  styleFamilySystems();
+}
+
+function styleFamilySystems(){
+  const selectedFamily=selected ? familyById[String(selected)] : null;
+
+  for(const [fam,shape] of Object.entries(familyShapeById)){
+    const same=selectedFamily && fam===selectedFamily;
+    shape.setStyle({
+      color:getCss("--family"),
+      weight:same?3.5:2,
+      opacity:same?.82:.38,
+      fillColor:"#b9d9ee",
+      fillOpacity:same?.28:.14
+    });
+    if(same && shape.bringToFront) shape.bringToFront();
+  }
+
+  if(edgeLayer && edgeLayer.bringToFront) edgeLayer.bringToFront();
+  if(arrowLayer && arrowLayer.bringToFront) arrowLayer.bringToFront();
+  if(nodeLayer && nodeLayer.bringToFront) nodeLayer.bringToFront();
+}
+
+/* ---- map rendering ---- */
 function nodeStyle(f){
   const t=f.properties.feature_type;
-  return {radius:4,weight:1,color:"#ffffff",
-    fillColor:t==="barrier"?getCss("--barrier"):getCss("--reservoir"),fillOpacity:.95};
+  return {
+    radius:6,
+    weight:1.5,
+    color:"#ffffff",
+    fillColor:t==="barrier"?getCss("--barrier"):getCss("--reservoir"),
+    fillOpacity:.97
+  };
 }
+
+function baseEdgeStyle(){
+  return {
+    color:getCss("--water"),
+    weight:2.1,
+    opacity:.78,
+    dashArray:"6 7",
+    lineCap:"round"
+  };
+}
+
+function refreshArrow(l,color,opacity,pixelSize=7){
+  if(l._arrowDecorator && arrowLayer){
+    try{ arrowLayer.removeLayer(l._arrowDecorator); }catch(e){}
+    l._arrowDecorator=null;
+  }
+  if(!arrowLayer || typeof L.polylineDecorator!=="function") return;
+
+  const dec=L.polylineDecorator(l,{
+    patterns:[{
+      offset:"58%",
+      repeat:0,
+      symbol:L.Symbol.arrowHead({
+        pixelSize,
+        polygon:true,
+        pathOptions:{
+          color,
+          fillColor:color,
+          fillOpacity:opacity,
+          opacity,
+          weight:1
+        }
+      })
+    }]
+  });
+  l._arrowDecorator=dec;
+  arrowLayer.addLayer(dec);
+}
+
+function setEdgeStyle(l,mode="base"){
+  if(mode==="trace"){
+    const color=getCss("--trace");
+    l.setStyle({color,weight:4,opacity:1,dashArray:null,lineCap:"round"});
+    refreshArrow(l,color,1,9);
+  }else if(mode==="hover"){
+    const color=getCss("--selected");
+    l.setStyle({color,weight:5.2,opacity:1,dashArray:null,lineCap:"round"});
+    refreshArrow(l,color,1,10);
+  }else if(mode==="dim"){
+    const color=getCss("--water-dim");
+    l.setStyle({color,weight:1.4,opacity:.50,dashArray:"4 8",lineCap:"round"});
+    refreshArrow(l,color,.45,6);
+  }else{
+    const color=getCss("--water");
+    l.setStyle(baseEdgeStyle());
+    refreshArrow(l,color,.8,7);
+  }
+}
+
 function drawLayers(nodesFC, edgesFC){
   if(edgeLayer) edgeLayer.remove();
+  if(arrowLayer) arrowLayer.remove();
+  if(familyLayer) familyLayer.remove();
   if(nodeLayer) nodeLayer.remove();
+
   nodeLayerById={};
-  edgeLayer=L.geoJSON(edgesFC,{style:()=>({color:getCss("--water"),weight:1.4,opacity:.8})}).addTo(map);
+
+  buildFamilyIndex(nodesFC.features);
+
+  edgeLayer=L.geoJSON(edgesFC,{
+    style:()=>baseEdgeStyle()
+  }).addTo(map);
+
+  arrowLayer=L.layerGroup().addTo(map);
+  edgeLayer.eachLayer(l=>setEdgeStyle(l,"base"));
+
+  // One blue translucent area groups the full connected parent-child system.
+  drawFamilySystems();
+
   nodeLayer=L.geoJSON(nodesFC,{
     pointToLayer:(f,ll)=>L.circleMarker(ll,nodeStyle(f)),
     onEachFeature:(f,layer)=>{
       layer.featureId=String(f.properties.id);
       nodeLayerById[layer.featureId]=layer;
       layer.on("click",()=>select(layer.featureId));
-      layer.bindTooltip(String(f.properties.id),{direction:"top",offset:[0,-4]});
+      layer.bindTooltip(String(f.properties.id),{direction:"top",offset:[0,-7]});
     }
   }).addTo(map);
+
+  styleFamilySystems();
   try{ map.fitBounds(nodeLayer.getBounds(),{padding:[30,30]}); }catch(e){}
 }
 
-/* Style one node/edge according to the current trace context (traceCtx). */
 function styleNodeForTrace(l){
   const id=l.featureId;
-  if(!traceCtx){ l.setStyle({...nodeStyle(l.feature),fillOpacity:.95,radius:4,weight:1}); return; }
+
+  if(!traceCtx){
+    l.setStyle({...nodeStyle(l.feature),fillOpacity:.97,radius:6,weight:1.5});
+    return;
+  }
+
   if(id===traceCtx.X){
-    l.setStyle({...nodeStyle(l.feature),radius:7,weight:2,
-      color:"#ffffff",fillColor:getCss("--selected"),fillOpacity:1}); l.bringToFront();
+    l.setStyle({...nodeStyle(l.feature),radius:10,weight:2.5,color:"#ffffff",
+      fillColor:getCss("--selected"),fillOpacity:1});
+    l.bringToFront();
   }else if(traceCtx.ancSet.has(id)){
-    l.setStyle({...nodeStyle(l.feature),radius:5,weight:2,
-      color:"#ffffff",fillColor:getCss("--trace"),fillOpacity:1}); l.bringToFront();
+    l.setStyle({...nodeStyle(l.feature),radius:8,weight:2.2,color:"#ffffff",
+      fillColor:getCss("--trace"),fillOpacity:1});
+    l.bringToFront();
   }else{
-    l.setStyle({...nodeStyle(l.feature),fillOpacity:.18,radius:3,weight:0});
+    l.setStyle({...nodeStyle(l.feature),fillOpacity:.28,radius:5,weight:1});
   }
 }
+
 function edgeOn(l){
   const p=l.feature.properties;
-  return traceCtx && traceCtx.ancSet.has(String(p.from_id)) && traceCtx.pathNodes.has(String(p.to_id));
+  return traceCtx &&
+    traceCtx.ancSet.has(String(p.from_id)) &&
+    traceCtx.pathNodes.has(String(p.to_id));
 }
+
 function styleEdgeForTrace(l){
-  if(!traceCtx){ l.setStyle({color:getCss("--water"),weight:1.4,opacity:.8}); return; }
-  l.setStyle(edgeOn(l) ? {color:getCss("--trace"),weight:3,opacity:1}
-                       : {color:getCss("--water-dim"),weight:1,opacity:.6});
+  if(!traceCtx){
+    setEdgeStyle(l,"base");
+    return;
+  }
+  setEdgeStyle(l,edgeOn(l)?"trace":"dim");
 }
 
 function resetHighlight(){
-  selected=null; traceCtx=null;
+  selected=null;
+  traceCtx=null;
   edgeLayer.eachLayer(styleEdgeForTrace);
   nodeLayer.eachLayer(styleNodeForTrace);
+  styleFamilySystems();
   renderIdle();
 }
-function select(X){
-  selected=X;
-  const {anc,ancSet,pathNodes,immediate}=backtrack(X);
-  traceCtx={X:String(X),ancSet,pathNodes};
+
+async function select(X){
+  selected=String(X);
+  const requested=selected;
+  const {anc,ancSet,pathNodes,immediate}=backtrack(selected);
+  traceCtx={X:selected,ancSet,pathNodes};
+
   edgeLayer.eachLayer(styleEdgeForTrace);
   nodeLayer.eachLayer(styleNodeForTrace);
-  renderPanel(X,anc,immediate);
+  styleFamilySystems();
+
+  document.getElementById("content").innerHTML=
+    `<p class="hint">Loading influence data for reservoir ${selected}…</p>`;
+
+  try{
+    const data=await loadTargetData(selected);
+    if(selected!==requested) return;
+
+    const years=Object.keys(data.annual||{}).map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+    if(years.length && (activeYear==null || !years.includes(Number(activeYear))))
+      activeYear=years[years.length-1];
+
+    renderPanel(selected,anc,immediate,data,years);
+  }catch(err){
+    if(selected!==requested) return;
+    renderPanel(selected,anc,immediate,null,[]);
+  }
 }
 
-/* Emphasise one upstream reservoir (and the path edges touching it) on hover,
-   then restore the trace styling on leave. */
-function hoverReservoir(id, on){
+async function loadTargetData(X){
+  if(targetCache[X]) return targetCache[X];
+  const url=`${DATA.traceBase}${encodeURIComponent(X)}.json`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error(`Could not load ${url}`);
+  const obj=await r.json();
+  targetCache[X]=obj;
+  return obj;
+}
+
+function hoverReservoir(id,on){
   id=String(id);
   const layer=nodeLayerById[id];
+
   if(on){
     if(layer){
-      layer.setStyle({...nodeStyle(layer.feature),radius:9,weight:3,
-        color:"#ffffff",fillColor:getCss("--selected"),fillOpacity:1});
+      layer.setStyle({...nodeStyle(layer.feature),radius:11,weight:3,color:"#ffffff",
+        fillColor:getCss("--selected"),fillOpacity:1});
       layer.bringToFront();
       layer.openTooltip();
     }
+
     edgeLayer.eachLayer(l=>{
       const p=l.feature.properties;
-      if((String(p.from_id)===id||String(p.to_id)===id) && edgeOn(l)){
-        l.setStyle({color:getCss("--selected"),weight:5,opacity:1});
-      }
+      if((String(p.from_id)===id || String(p.to_id)===id) && (!traceCtx || edgeOn(l)))
+        setEdgeStyle(l,"hover");
     });
   }else{
-    if(layer){ styleNodeForTrace(layer); layer.closeTooltip(); }
+    if(layer){
+      styleNodeForTrace(layer);
+      layer.closeTooltip();
+    }
     edgeLayer.eachLayer(styleEdgeForTrace);
   }
 }
 
-/* ---- numbers ---- */
-function num(v){ if(v==null) return null; const n=Number(v); return isNaN(n)?null:n; }
-function days(x){
-  if(x==null) return "—";
-  const a=Math.abs(x);
-  if(a>=100) return Math.round(x).toLocaleString();
-  if(a>=10)  return (Math.round(x*10)/10).toString();
-  return (Math.round(x*100)/100).toString();
+/* ---- influence display ---- */
+function seasonData(data,year,season){
+  return data?.annual?.[String(year)]?.[season] || null;
 }
 
-/* Per-season sum-then-divide up the cascade.
-   inherited = total days the upstream reservoirs hold back the water (negatives excluded).
-   share     = inherited / (this reservoir + inherited), only when this reservoir's value is positive. */
-function seasonalTrace(X, anc){
-  const out={};
-  for(const [key] of SEASONS){
-    const own=num(attrs[X]?.[key]);
-    let inherited=0, skipped=0;
-    for(const a of anc){
-      const v=num(attrs[a.id]?.[key]);
-      if(v==null) continue;
-      if(v<0){ skipped++; continue; }
-      inherited+=v;
-    }
-    const base=(own!=null&&own>0?own:0)+inherited;
-    const share=(own!=null&&own>0&&base>0)?inherited/base:null;
-    out[key]={own, inherited, total:base, share, skipped};
+function renderKeyQuestions(data,year,season){
+  const s=seasonData(data,year,season);
+  const sources=(s?.sources||[]).filter(r=>num(r.delta_storage_mcm)!=null);
+
+  const strongest=[...sources].sort((a,b)=>{
+    const av=Math.abs(num(a.delta_storage_mcm)??0);
+    const bv=Math.abs(num(b.delta_storage_mcm)??0);
+    return bv-av;
+  })[0] || null;
+
+  const strongestAddition=[...sources]
+    .filter(r=>num(r.delta_storage_mcm)<0)
+    .sort((a,b)=>Math.abs(num(b.delta_storage_mcm)??0)-Math.abs(num(a.delta_storage_mcm)??0))[0] || null;
+
+  let h=`<div class="sectiontitle">Main results</div><div class="keyquestions">`;
+
+  if(strongest){
+    const id=String(strongest.gww_id);
+    const ds=num(strongest.delta_storage_mcm);
+    const effect=Math.abs(num(strongest.pair_impact_pct_of_target_runoff)??0);
+    const cov=num(strongest.runoff_coverage_pct);
+    const hops=num(strongest.hops);
+    const increased=ds>0;
+
+    h+=`<div class="qcard has-source" data-source-id="${id}">
+      <div class="qnum">1 · Strongest overall storage influence</div>
+      <div class="qtitle">Which upstream reservoir changed downstream water conditions the most?</div>
+      <div class="answerrow">
+        <div class="qanswer">Reservoir ${id}</div>
+        <div class="answerstate ${increased?"fill":"draw"}">${increased?"stored more water":"stored less water"}</div>
+      </div>
+      <div class="plainresult">
+        Its stored water <strong>${increased?"increased":"decreased"} by ${waterVol(ds,1)}</strong> during this season.
+      </div>
+      <div class="plainresult" style="margin-top:6px">
+        That amount equals about <strong>${fmt(effect,2)}%</strong> of the seasonal runoff generated across the full watershed of Reservoir ${data.gww_id}.
+      </div>
+      <div class="plainresult" style="margin-top:6px">
+        <strong>Why this matters:</strong> ${increased
+          ? `the reservoir stored a large amount of water compared with the season's watershed runoff, so it may have <strong>reduced water moving downstream</strong>.`
+          : `the reservoir ended with substantially less stored water, so it may have <strong>added previously stored water to downstream flow</strong>.`}
+      </div>
+      <div class="factrow">
+        <span class="fact"><b>${fmt(cov,1)}%</b> of the selected watershed's runoff is generated above this reservoir</span>
+        ${hops!=null?`<span class="fact"><b>${hops}</b> step${hops===1?"":"s"} upstream</span>`:""}
+      </div>
+      <div class="qhint">Click to view Reservoir ${id}</div>
+    </div>`;
+  }else{
+    h+=`<div class="qcard">
+      <div class="qnum">1 · Strongest overall storage influence</div>
+      <div class="qtitle">Which upstream reservoir changed downstream water conditions the most?</div>
+      <div class="answerrow"><div class="qanswer">No result</div></div>
+      <div class="plainresult">No upstream storage result is available for this year and season.</div>
+    </div>`;
   }
-  return out;
+
+  if(strongestAddition){
+    const id=String(strongestAddition.gww_id);
+    const ds=num(strongestAddition.delta_storage_mcm);
+    const effect=Math.abs(num(strongestAddition.pair_impact_pct_of_target_runoff)??0);
+    const cov=num(strongestAddition.runoff_coverage_pct);
+    const hops=num(strongestAddition.hops);
+
+    h+=`<div class="qcard drawcard has-source" data-source-id="${id}">
+      <div class="qnum">2 · Strongest potential addition to downstream flow</div>
+      <div class="qtitle">Which upstream reservoir may have added the most stored water to downstream flow?</div>
+      <div class="answerrow">
+        <div class="qanswer draw">Reservoir ${id}</div>
+        <div class="answerstate draw">largest storage decrease</div>
+      </div>
+      <div class="plainresult">
+        Its stored water <strong>decreased by ${waterVol(ds,1)}</strong> during this season — the largest decrease among the upstream reservoirs.
+      </div>
+      <div class="plainresult" style="margin-top:6px">
+        That decrease equals about <strong>${fmt(effect,2)}%</strong> of the seasonal runoff generated across the full watershed of Reservoir ${data.gww_id}.
+      </div>
+      <div class="plainresult" style="margin-top:6px">
+        <strong>Why this matters:</strong> this reservoir shows the strongest potential for <strong>previously stored water to have been added back to the downstream river system</strong> during this season.
+      </div>
+      <div class="factrow">
+        <span class="fact"><b>${fmt(cov,1)}%</b> of the selected watershed's runoff is generated above this reservoir</span>
+        ${hops!=null?`<span class="fact"><b>${hops}</b> step${hops===1?"":"s"} upstream</span>`:""}
+      </div>
+      <div class="qhint">Click to view Reservoir ${id}</div>
+    </div>`;
+  }else{
+    h+=`<div class="qcard drawcard">
+      <div class="qnum">2 · Potential addition to downstream flow</div>
+      <div class="qtitle">Which upstream reservoir may have added the most stored water to downstream flow?</div>
+      <div class="answerrow"><div class="qanswer draw">None</div></div>
+      <div class="plainresult">No upstream reservoir ended this season with less stored water than it started with.</div>
+    </div>`;
+  }
+
+  return h+`</div>`;
 }
 
-/* Build the upstream list for the active season: each reservoir's own days and its
-   share of the upstream total, ranked biggest-contributor first. */
-function renderUpstreamList(anc, immediate, haveAttrs){
-  if(!haveAttrs){
-    let h=`<ul class="chain">`;
-    for(const a of anc){
-      const dir=immediate.has(a.id)?`<span class="dir">feeds it directly</span>`:"";
-      const steps=a.pos+1;
-      h+=`<li data-id="${a.id}"><span class="hop">${steps} step${steps>1?"s":""} up</span>
-        <span class="rid">${a.id}</span>${dir}</li>`;
+function renderSeasonCards(data,year){
+  let h=`<div class="seasons">`;
+
+  for(const [key,label] of SEASONS){
+    const s=seasonData(data,year,key);
+
+    if(!s){
+      h+=`<div class="season">
+        <div class="sname">${label}</div>
+        <div class="season-story muted">No result is available for this season.</div>
+      </div>`;
+      continue;
     }
-    return h+`</ul>`;
+
+    const upDS=num(s.upstream_delta_storage_mcm);
+    const totalDecrease=num(s.upstream_drawdown_proxy_mcm);
+    const decreasePct=Math.abs(num(s.upstream_drawdown_pct_of_target_runoff)??0);
+    const upDays=num(s.upstream_impact_days);
+    const runoff=num(s.target_full_runoff_mcm);
+
+    let storageSentence;
+    if(upDS>0){
+      storageSentence=`Together, the upstream reservoirs ended the season with <b>${waterVol(upDS,1)} more stored water</b>, indicating a net storage increase.`;
+    }else if(upDS<0){
+      storageSentence=`Together, the upstream reservoirs ended the season with <b>${waterVol(upDS,1)} less stored water</b>, indicating a net storage decrease.`;
+    }else{
+      storageSentence=`Together, the upstream reservoirs had <b>no net change in stored water</b>.`;
+    }
+
+    let decreaseSentence;
+    if(totalDecrease>0){
+      decreaseSentence=`Reservoirs that lost stored water decreased by <b>${waterVol(totalDecrease,1)}</b> in total. That amount equals about <b>${fmt(decreasePct,1)}%</b> of the seasonal watershed runoff.`;
+    }else{
+      decreaseSentence=`No upstream reservoir showed a seasonal decrease in stored water.`;
+    }
+
+    h+=`<div class="season">
+      <div class="sname">${label}</div>
+      <div class="season-story">${storageSentence}</div>
+      <div class="season-story">
+        Seasonal runoff generated across the selected reservoir's full watershed: <b>${waterVol(runoff,1)}</b>.
+      </div>
+      <div class="season-story">
+        The net upstream storage change is equivalent to about <b>${fmt(Math.abs(upDays),1)} days</b> of the season's average daily watershed runoff.
+      </div>
+      <div class="season-story muted">${decreaseSentence}</div>
+    </div>`;
   }
-  let inherited=0;
-  const rows=anc.map(a=>{
-    const v=num(attrs[a.id]?.[activeSeason]);
-    const excluded=(v==null||v<0);
-    if(!excluded) inherited+=v;
-    return {id:a.id,pos:a.pos,val:v,excluded};
-  });
-  rows.forEach(r=> r.share=(!r.excluded&&inherited>0)?r.val/inherited:null);
-  rows.sort((x,y)=>(x.excluded?-1:x.val)<(y.excluded?-1:y.val)?1:-1); // biggest first
+
+  return h+`</div>`;
+}
+
+function renderUpstreamList(anc,immediate,data,year,season){
+  const s=seasonData(data,year,season);
+  const byId={};
+  for(const r of (s?.sources||[])) byId[String(r.gww_id)]=r;
+
+  let rows=anc.map(a=>({
+    id:String(a.id),
+    pos:a.pos,
+    r:byId[String(a.id)]||null
+  }));
+
+  rows.sort((A,B)=>
+    Math.abs(num(B.r?.delta_storage_mcm)??-Infinity) -
+    Math.abs(num(A.r?.delta_storage_mcm)??-Infinity)
+  );
 
   let h=`<ul class="chain">`;
-  for(const r of rows){
-    const steps=r.pos+1;
-    const dir=immediate.has(r.id)?" · direct":"";
-    let contrib;
-    if(r.excluded){
-      contrib=`<span class="contrib exc">flagged</span>`;
-    }else{
-      const pct=r.share==null?"—":Math.round(r.share*100)+"%";
-      contrib=`<span class="contrib">${days(r.val)} d · <b>${pct}</b></span>`;
+
+  for(const row of rows){
+    const steps=row.pos+1;
+    const direct=immediate.has(row.id);
+    const relation=direct ? `directly upstream` : `${steps} steps upstream`;
+
+    if(!row.r){
+      h+=`<li data-id="${row.id}">
+        <div class="source-head">
+          <div class="source-name">Reservoir ${row.id}</div>
+          <div class="source-relation">${relation}</div>
+        </div>
+        <div class="source-detail">No storage result is available for the selected season.</div>
+      </li>`;
+      continue;
     }
-    h+=`<li data-id="${r.id}"><span class="hop">${steps} up${dir}</span>
-      <span class="rid">${r.id}</span>${contrib}</li>`;
+
+    const r=row.r;
+    const ds=num(r.delta_storage_mcm);
+    const pairPct=Math.abs(num(r.pair_impact_pct_of_target_runoff)??0);
+    const runoffCov=num(r.runoff_coverage_pct);
+
+    let changeText;
+    let meaningText;
+
+    if(ds>0){
+      changeText=`Stored water <span class="up">increased by ${waterVol(ds,1)}</span>.`;
+      meaningText=`More water remained stored in this reservoir, so it may have reduced water moving downstream during the season.`;
+    }else if(ds<0){
+      changeText=`Stored water <span class="down">decreased by ${waterVol(ds,1)}</span>.`;
+      meaningText=`The reservoir ended with less stored water, so previously stored water may have been added back to downstream flow.`;
+    }else{
+      changeText=`Stored water had no net seasonal change.`;
+      meaningText=`No clear seasonal storage increase or decrease was measured.`;
+    }
+
+    h+=`<li data-id="${row.id}">
+      <div class="source-head">
+        <div class="source-name">Reservoir ${row.id}</div>
+        <div class="source-relation">${relation}</div>
+      </div>
+      <div class="source-main">${changeText}</div>
+      <div class="source-detail">
+        This storage change equals about <b>${fmt(pairPct,2)}%</b> of the seasonal runoff generated across the selected reservoir's full watershed.<br>
+        <b>Why it matters:</b> ${meaningText}<br>
+        About <b>${fmt(runoffCov,1)}%</b> of the selected watershed's runoff is generated in the drainage area above this reservoir.
+      </div>
+    </li>`;
   }
+
   return h+`</ul>`;
 }
 
-/* ---- panel ---- */
-function renderPanel(X,anc,immediate){
-  const p=nodesById[X].properties;
-  const type=p.feature_type||"reservoir";
-  const haveAttrs=Object.keys(attrs).length>0;
+function renderPanel(X,anc,immediate,data,years){
   const country=attrs[X]?.country;
+  const gdw=data?.gdw_id ?? attrs[X]?.id;
 
   let html=`<div class="topbar">
     <button id="reset">Clear</button>
-    <span class="clearhint">Click Clear to visualize clearly</span>
+    <span class="clearhint">Drag the panel edge to resize</span>
+    <a class="helpLink" href="#help">How to read</a>
   </div>`;
-  html+=`<div class="target">${X}<span class="badge ${type}">${type}</span></div>`;
-  html+=`<div class="meta">`;
-  html+= anc.length>0
-    ? `${anc.length} reservoir${anc.length>1?"s":""} upstream`
-    : `at the top of the river`;
-  if(country) html+=` · ${country}`;
-  html+=`</div>`;
 
-  if(haveAttrs){
-    html+=`<div class="explain">
-      <b>“Days held back” = how much water a reservoir stores compared with how fast the river flows in.</b>
-      A bigger number means the reservoir can delay and smooth the flow more. Each box shows this reservoir on its
-      own, then the total once every reservoir upstream is added in.
-      <details><summary>What does this actually mean?</summary>
-        <p>Picture the river filling a bathtub. “5 days” means it would take about 5 days of the river
-        running in to fill this reservoir — so it holds roughly 5 days’ worth of flow. The water isn’t
-        trapped forever; it still passes through. The number just shows how big the storage is next to
-        the flow, which is how much the reservoir can control it.</p>
-        <p>Seasons differ a lot. In the <b>dry</b> season the river is a trickle, so even modest storage
-        equals many days and the numbers look huge. In the <b>monsoon</b> the river is a torrent, so the
-        same storage is only a few days. It’s the same reservoir — only the amount of water it’s measured
-        against changes.</p>
-        <p>The total adds up every reservoir upstream as if all the water flowed through each one in a single
-        line. Real side-streams join in and dilute this, so treat large totals as an
-        <b>upper estimate</b>, not an exact figure.</p>
-      </details>
-    </div>`;
+  html+=`<div class="selectionbar">
+    <div class="who">Selected reservoir<br><b>Reservoir ${X}</b></div>
+    <div class="count">${anc.length} reservoir${anc.length===1?"":"s"} upstream</div>
+  </div>`;
 
-    const t=seasonalTrace(X,anc);
-    let anySkip=0;
-    html+=`<p class="sechead">How long the water is held back</p><div class="seasons">`;
-    for(const [key,label] of SEASONS){
-      const s=t[key]; anySkip+=s.skipped;
-      const ownTxt = (s.own!=null && s.own<0) ? "flagged" : days(s.own);
-      const shareTxt = s.share==null ? "—" : Math.round(s.share*100)+"%";
-      html+=`<div class="season">
-        <div class="sname">${label}</div>
-        <div class="stotal">${days(s.total)}<span class="unit">days of river flow held back</span></div>
-        <div class="sbreak">This reservoir: ${ownTxt} · upstream reservoirs: ${days(s.inherited)}</div>
-        <div class="spct">${shareTxt} comes from upstream</div>
-      </div>`;
-    }
+  if(gdw!=null || country){
+    html+=`<div class="meta" style="margin-top:-5px">`;
+    if(gdw!=null) html+=`GDW ${gdw}`;
+    if(gdw!=null && country) html+=` · `;
+    if(country) html+=country;
     html+=`</div>`;
-    if(anySkip>0) html+=`<p class="note">Some upstream reservoirs had unusable (negative) values and were left out of the totals, so the real figures may be a little higher.</p>`;
   }
 
-  if(anc.length===0){
-    html+=`<p class="sechead">What’s upstream</p>
-      <p class="empty">Nothing. This reservoir sits at the top of its river, so only the natural river feeds it — no reservoir above it controls its water.</p>`;
-  }else{
-    html+=`<p class="sechead">Which upstream reservoirs hold the most</p>`;
-    if(haveAttrs){
-      html+=`<div class="seasonpick">`;
-      for(const [key,label] of SEASONS){
-        html+=`<button data-season="${key}"${key===activeSeason?' class="on"':''}>${label}</button>`;
-      }
-      html+=`</div>`;
-    }
-    html+=renderUpstreamList(anc,immediate,haveAttrs);
+  if(!data){
+    html+=`<p class="error">Calculated upstream information could not be loaded for this reservoir.</p>`;
+    document.getElementById("content").innerHTML=html;
+    bindPanelEvents(X);
+    applyPanelWidth();
+    initPanelDrag();
+    return;
   }
+
+  html+=`<div class="time-controls">
+    <div class="time-row">
+      <span class="time-label">Year</span>
+      <select id="yearPick">`;
+  for(const y of years)
+    html+=`<option value="${y}"${Number(y)===Number(activeYear)?" selected":""}>${y}</option>`;
+  html+=`</select>
+    </div>
+    <div class="time-row">
+      <span class="time-label">Season</span>
+      <div class="seasonpick" style="margin:0">`;
+  for(const [key,label] of SEASONS)
+    html+=`<button data-season="${key}"${key===activeSeason?' class="on"':''}>${label}</button>`;
+  html+=`</div></div></div>`;
+
+  html+=renderKeyQuestions(data,activeYear,activeSeason);
+
+  if(anc.length>0){
+    html+=`<details class="paneldrop">
+      <summary>Compare all upstream reservoirs (${anc.length})</summary>
+      <div class="dropbody">${renderUpstreamList(anc,immediate,data,activeYear,activeSeason)}</div>
+    </details>`;
+  }
+
+  html+=`<details class="paneldrop">
+    <summary>Compare seasons</summary>
+    <div class="dropbody">${renderSeasonCards(data,activeYear)}</div>
+  </details>`;
+
+  document.getElementById("content").innerHTML=html;
+  bindPanelEvents(X);
+  applyPanelWidth();
+  initPanelDrag();
+}
+
+function applyPanelWidth(){
+  const panel=document.getElementById("panel");
+  if(panel && window.innerWidth>720) panel.style.width=`${panelWidth}px`;
+}
+
+function initPanelDrag(){
+  const panel=document.getElementById("panel");
+  const handle=document.getElementById("panelResizeHandle");
+  if(!panel || !handle || handle.dataset.bound==="1") return;
+
+  handle.dataset.bound="1";
+
+  const MIN_W=320;
+  const MAX_W=620;
+  let dragging=false;
+
+  function beginDrag(e){
+    if(window.innerWidth<=720) return;
+    dragging=true;
+    handle.classList.add("dragging");
+    document.body.classList.add("resizing-panel");
+    if(e.pointerId!=null && handle.setPointerCapture){
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+    }
+    e.preventDefault();
+  }
+
+  function moveDrag(e){
+    if(!dragging) return;
+
+    // Panel is docked to the right, so width = viewport right edge - pointer x.
+    const newWidth=window.innerWidth - e.clientX;
+    panelWidth=Math.max(MIN_W,Math.min(MAX_W,newWidth));
+    panel.style.width=`${panelWidth}px`;
+
+    try{ map.invalidateSize({animate:false}); }catch(err){}
+    e.preventDefault();
+  }
+
+  function endDrag(e){
+    if(!dragging) return;
+    dragging=false;
+    handle.classList.remove("dragging");
+    document.body.classList.remove("resizing-panel");
+
+    if(e?.pointerId!=null && handle.releasePointerCapture){
+      try{ handle.releasePointerCapture(e.pointerId); }catch(err){}
+    }
+    try{ map.invalidateSize({animate:false}); }catch(err){}
+  }
+
+  handle.addEventListener("pointerdown",beginDrag);
+  handle.addEventListener("pointermove",moveDrag);
+  handle.addEventListener("pointerup",endDrag);
+  handle.addEventListener("pointercancel",endDrag);
+  window.addEventListener("pointerup",endDrag);
+}
+
+function bindPanelEvents(X){
   const c=document.getElementById("content");
-  c.innerHTML=html;
   c.querySelectorAll("ul.chain li").forEach(li=>{
     li.addEventListener("click",()=>select(li.dataset.id));
     li.addEventListener("mouseenter",()=>hoverReservoir(li.dataset.id,true));
     li.addEventListener("mouseleave",()=>hoverReservoir(li.dataset.id,false));
   });
+
   c.querySelectorAll(".seasonpick button").forEach(b=>
     b.addEventListener("click",()=>{ activeSeason=b.dataset.season; select(X); }));
-  document.getElementById("reset").addEventListener("click",resetHighlight);
+
+  const yp=document.getElementById("yearPick");
+  if(yp) yp.addEventListener("change",()=>{ activeYear=Number(yp.value); select(X); });
+
+  c.querySelectorAll(".qcard[data-source-id]").forEach(card=>{
+    card.addEventListener("click",()=>select(card.dataset.sourceId));
+    card.addEventListener("mouseenter",()=>hoverReservoir(card.dataset.sourceId,true));
+    card.addEventListener("mouseleave",()=>hoverReservoir(card.dataset.sourceId,false));
+  });
+
+  const reset=document.getElementById("reset");
+  if(reset) reset.addEventListener("click",resetHighlight);
 }
+
 function renderIdle(){
   document.getElementById("content").innerHTML=
-    `<p class="hint">Tap any reservoir on the map to see which reservoirs upstream control the water reaching it.</p>`;
+    `<p class="hint"><b>Click a reservoir on the map.</b><br><br>
+    The dashboard will show:<br><br>
+    <b>1.</b> Which upstream reservoir had the strongest overall storage influence?<br>
+    <b>2.</b> Which upstream reservoir may have added the most previously stored water to downstream flow?<br><br>
+    Drag the <b>left edge</b> of this panel to resize it.<br><br>
+    <a class="helpLink" href="#help">Open “How to read this dashboard”</a></p>`;
 }
 
 /* ---- loading ---- */
-function readFile(file){return new Promise((res,rej)=>{
-  const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsText(file);
-});}
 function indexAttrs(arr){
   attrs={};
-  (Array.isArray(arr)?arr:Object.values(arr)).forEach(r=>{ attrs[String(r.gww_id)]=r; });
+  (Array.isArray(arr)?arr:Object.values(arr)).forEach(r=>{
+    if(r?.gww_id!=null) attrs[String(r.gww_id)]=r;
+  });
 }
+
 function finishLoad(nodesFC,edgesFC){
-  nodesById={}; nodesFC.features.forEach(f=>nodesById[String(f.properties.id)]=f);
+  nodesById={};
+  nodesFC.features.forEach(f=>nodesById[String(f.properties.id)]=f);
   ancestorIndex=buildAncestorIndex(nodesFC.features);
   drawLayers(nodesFC,edgesFC);
   renderIdle();
 }
+
+async function fetchJSON(path, required=true){
+  const r=await fetch(path);
+  if(!r.ok){
+    if(required) throw new Error(`${path} (${r.status})`);
+    return null;
+  }
+  return r.json();
+}
+
 async function autoLoad(){
   try{
+    // These are the exact project files created/used by the Python workflow.
     const [nodesFC,edgesFC,arr]=await Promise.all([
-      fetch(DATA.nodes).then(r=>{if(!r.ok)throw new Error("nodes");return r.json();}),
-      fetch(DATA.edges).then(r=>{if(!r.ok)throw new Error("edges");return r.json();}),
-      fetch(DATA.attrs).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetchJSON(DATA.nodes, true),
+      fetchJSON(DATA.edges, true),
+      fetchJSON(DATA.attrs, false)
     ]);
+
     if(arr) indexAttrs(arr);
     finishLoad(nodesFC,edgesFC);
   }catch(e){
     document.getElementById("loader").style.display="block";
-    document.getElementById("loadmsg").textContent=
-      "Couldn’t load the data automatically. If you opened this file directly, serve the folder over http (GitHub Pages or a local server) — or pick the files below.";
+    document.getElementById("loadmsg").innerHTML=
+      `<b>Could not load the saved project files.</b><br><br>`+
+      `Expected paths:<br>`+
+      `<code>${DATA.nodes}</code><br>`+
+      `<code>${DATA.edges}</code><br>`+
+      `<code>${DATA.attrs}</code><br>`+
+      `<code>${DATA.traceBase}&lt;GWW_ID&gt;.json</code><br><br>`+
+      `Serve the <b>Hydrology Website</b> project root over HTTP so these relative paths are available. `+
+      `Error: ${String(e.message||e)}`;
     document.getElementById("content").innerHTML=
-      `<p class="hint">Waiting for data files…</p>`;
+      `<p class="hint">Reservoir network data could not be loaded from the saved project paths.</p>`;
   }
 }
 
-// fallback pickers
-let pendingNodes=null, pendingEdges=null;
-function maybeFinish(){ if(pendingNodes&&pendingEdges) finishLoad(pendingNodes,pendingEdges); }
-document.getElementById("fileNodes").addEventListener("change",async e=>{
-  pendingNodes=JSON.parse(await readFile(e.target.files[0])); maybeFinish();
-});
-document.getElementById("fileEdges").addEventListener("change",async e=>{
-  pendingEdges=JSON.parse(await readFile(e.target.files[0])); maybeFinish();
-});
-document.getElementById("fileAttrs").addEventListener("change",async e=>{
-  indexAttrs(JSON.parse(await readFile(e.target.files[0])));
-  if(selected) select(selected);
+window.addEventListener("resize",()=>{
+  applyPanelWidth();
+  try{ map.invalidateSize(); }catch(e){}
 });
 
+
+function showAppPage(){
+  const hash=(location.hash||"#dashboard").toLowerCase();
+  const showHelp=hash==="#help";
+
+  const dashboard=document.getElementById("dashboardPage");
+  const help=document.getElementById("helpPage");
+
+  if(dashboard) dashboard.classList.toggle("active",!showHelp);
+  if(help) help.classList.toggle("active",showHelp);
+
+  if(!showHelp){
+    setTimeout(()=>{
+      try{ map.invalidateSize({animate:false}); }catch(e){}
+      applyPanelWidth();
+    },50);
+  }else{
+    window.scrollTo(0,0);
+  }
+}
+
+window.addEventListener("hashchange",showAppPage);
+
+
 initMap();
+applyPanelWidth();
+initPanelDrag();
 autoLoad();
+showAppPage();
 </script>
 </body>
 </html>

@@ -1,8 +1,6 @@
 import os
 import json
 import argparse
-from calendar import monthrange
-from collections import defaultdict
 
 SEASONS = {
     "dry":         [1, 2, 3],
@@ -11,6 +9,15 @@ SEASONS = {
     "winter":      [10, 11, 12],
 }
 
+WINDOWS = {
+    "2001-2005": (2001, 2005),
+    "2006-2010": (2006, 2010),
+    "2011-2015": (2011, 2015),
+    "2016-2021": (2016, 2021),
+}
+
+STORAGE_ABS_MAX = 1e6
+
 
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__)
@@ -18,6 +25,9 @@ def parse_args():
     p.add_argument("--reservoir_json", default="geojson/reservoir.json")
     p.add_argument("--out_json",       default="geojson/reservoir_corrected/reservoir.json")
     p.add_argument("--out_csv",        default="Dataset/storage_impact_summary.csv")
+    p.add_argument("--out_annual_csv", default="Dataset/storage_impact_annual.csv")
+    p.add_argument("--denom", choices=["total", "mean"], default="total",
+                   help="divide by the total (sum) or mean of the window's monthly inflow")
     return p.parse_args()
 
 
@@ -36,17 +46,12 @@ def parse_ymd(date_str):
         return None, None
 
 
-def days_in_month(year, month):
-    return monthrange(year, month)[1]
-
-
-def compute_impact(runoff_ts, storage_ts):
+def parse_series(runoff_ts, storage_ts):
     if runoff_ts is None or storage_ts is None:
-        return {s: None for s in SEASONS}
-
+        return None, None
     net_area = runoff_ts.get("net_area_km2") or runoff_ts.get("area_km2")
     if not net_area or net_area <= 0:
-        return {s: None for s in SEASONS}
+        return None, None
 
     surface = runoff_ts.get("Surface", [])
     subsurf = runoff_ts.get("Sub_Surface", [])
@@ -55,59 +60,97 @@ def compute_impact(runoff_ts, storage_ts):
     runoff_vol = {}
     for i, d in enumerate(r_dates):
         y, m = parse_ymd(d)
-        if y is None or m is None:
+        if y is None:
             continue
         sv = surface[i] if i < len(surface) else None
         bv = subsurf[i] if i < len(subsurf) else None
         if sv is None and bv is None:
             continue
-        total_rate = (sv or 0.0) + (bv or 0.0)      
-        runoff_vol[(y, m)] = total_rate * net_area * days_in_month(y, m) 
+        rate = (sv or 0.0) + (bv or 0.0)          # m/month
+        runoff_vol[(y, m)] = rate * net_area      # MCM
 
     s_vals  = storage_ts.get("Storage", [])
     s_dates = storage_ts.get("dates", [])
-    storage = {}  
+    storage = {}
     for i, d in enumerate(s_dates):
         y, m = parse_ymd(d)
-        if y is None or m is None:
+        if y is None:
             continue
         sv = s_vals[i] if i < len(s_vals) else None
-        if sv is not None:
-            storage[(y, m)] = sv
+        if sv is None:
+            continue
+        if STORAGE_ABS_MAX is not None and abs(sv) > STORAGE_ABS_MAX:
+            continue
+        storage[(y, m)] = sv
 
-    # Per season, per year
+    return runoff_vol, storage
+
+
+def compute_annual_seasonal(runoff_vol, storage, denom_mode):
+    years = sorted({y for (y, m) in storage})
+    out = {}
+    for y in years:
+        seasons = {}
+        for season, months in SEASONS.items():
+            iv = _window_impact(storage, runoff_vol, y, months, denom_mode)
+            seasons[season] = round(iv, 6) if iv is not None else None
+        if any(v is not None for v in seasons.values()):
+            out[y] = seasons
+    return out
+
+
+def _window_impact(storage, runoff_vol, y, months, denom_mode):
+    present = [(m, storage[(y, m)]) for m in months if (y, m) in storage]
+    if len(present) < 2:
+        return None
+    present.sort()
+    vals = [v for _, v in present]
+
+    net_dS = vals[-1] - vals[0]
+
+    volumes = [runoff_vol[(y, m)] for m in months if (y, m) in runoff_vol]
+    if not volumes:
+        return None
+    denom = sum(volumes) if denom_mode == "total" else sum(volumes) / len(volumes)
+    if denom == 0:
+        return None
+    return net_dS / denom
+
+
+def compute_windowed(runoff_vol, storage, denom_mode):
     result = {}
-    for season, months in SEASONS.items():
-        years = set()
-        for (y, m) in storage:
-            if m in months:
-                years.add(y)
-
-        yearly_impacts = []
-        for y in sorted(years):
-            s_months = [storage[(y, m)] for m in months if (y, m) in storage]
-            v_months = [runoff_vol[(y, m)] for m in months if (y, m) in runoff_vol]
-            if not s_months or not v_months:
-                continue
-            S_ys = sum(s_months) / len(s_months)      # mean storage        [MCM]
-            V_ys = sum(v_months)                       # total seasonal vol  [MCM]
-            if V_ys <= 0:
-                continue
-            yearly_impacts.append(S_ys / V_ys)         # dimensionless (days)
-
-        result[season] = (round(sum(yearly_impacts) / len(yearly_impacts), 6)
-                          if yearly_impacts else None)
-
+    for wlabel, (y0, y1) in WINDOWS.items():
+        wseasons = {}
+        for season, months in SEASONS.items():
+            vals = []
+            for y in range(y0, y1 + 1):
+                iv = _window_impact(storage, runoff_vol, y, months, denom_mode)
+                if iv is not None:
+                    vals.append(iv)
+            wseasons[season] = round(sum(vals) / len(vals), 6) if vals else None
+        result[wlabel] = wseasons
     return result
+
+
+def compute_annual(runoff_vol, storage, denom_mode):
+    years = sorted({y for (y, m) in storage})
+    out = {}
+    for y in years:
+        iv = _window_impact(storage, runoff_vol, y, list(range(1, 13)), denom_mode)
+        if iv is not None:
+            out[y] = round(iv, 6)
+    return out
 
 
 def main():
     args = parse_args()
-
     reservoirs = load_json(args.reservoir_json)
-    print(f"Reservoirs: {len(reservoirs)}")
+    print(f"Reservoirs: {len(reservoirs)}  (storage impact = net change; denominator = {args.denom})")
+    print(f"Windows: {', '.join(WINDOWS.keys())}")
 
-    impacts_by_gww = {}
+    windowed_by_gww = {}
+    annual_by_gww = {}
+    annual_seasonal_by_gww = {}
     kept_records = []
     computed = skipped = 0
 
@@ -118,38 +161,69 @@ def main():
             continue
         runoff_ts  = load_json(os.path.join(args.corr_dir, f"timeseries_{gww}.json"))
         storage_ts = load_json(os.path.join(args.corr_dir, f"storage_{gww}.json"))
-        impact = compute_impact(runoff_ts, storage_ts)
+        runoff_vol, storage = parse_series(runoff_ts, storage_ts)
+        if runoff_vol is None or not storage:
+            skipped += 1
+            continue
 
-        has_data = any(v is not None for v in impact.values())
+        windowed = compute_windowed(runoff_vol, storage, args.denom)
+        annual   = compute_annual(runoff_vol, storage, args.denom)
+        annual_seasonal = compute_annual_seasonal(runoff_vol, storage, args.denom)
+
+        has_data = any(v is not None for w in windowed.values() for v in w.values())
         if not has_data:
             skipped += 1
             continue
 
-        impacts_by_gww[gww] = impact
+        windowed_by_gww[gww] = windowed
+        annual_by_gww[gww]   = annual
+        annual_seasonal_by_gww[gww] = annual_seasonal
 
-        for season, val in impact.items():
-            rec[season] = val
+        # Nested impact object on the record: {window: {season: value}}
+        rec["impact"] = windowed
         kept_records.append(rec)
 
         with open(os.path.join(args.corr_dir, f"storage_impact_{gww}.json"), "w") as f:
-            json.dump(impact, f, separators=(",", ":"))
-
+            json.dump(windowed, f, separators=(",", ":"))
+        with open(os.path.join(args.corr_dir, f"storage_impact_annual_{gww}.json"), "w") as f:
+            json.dump({str(y): annual[y] for y in annual}, f, separators=(",", ":"))
+        with open(os.path.join(args.corr_dir, f"storage_impact_annual_seasonal_{gww}.json"), "w") as f:
+            json.dump({str(y): annual_seasonal[y] for y in annual_seasonal}, f, separators=(",", ":"))
         computed += 1
 
     with open(args.out_json, "w") as f:
         json.dump(kept_records, f, separators=(",", ":"))
     print(f"Updated: {args.out_json}  ({len(kept_records)} records)")
 
+    def fmt(v):
+        return "" if v is None else f"{v:.6f}"
+
+    # Wide summary CSV: one row per reservoir, all window×season impact values
     with open(args.out_csv, "w") as f:
-        f.write("gww_id,gdw_id,dry,pre_monsoon,monsoon,winter\n")
+        header = ["gww_id", "gdw_id"]
+        for w in WINDOWS:
+            for s in SEASONS:
+                header.append(f"{w}_{s}")
+        f.write(",".join(header) + "\n")
         for rec in kept_records:
-            gww = rec.get("gww_id", "")
+            gww = str(rec.get("gww_id", ""))
             gdw = rec.get("id", "")
-            imp = impacts_by_gww.get(str(gww), {})
-            def fmt(v): return "" if v is None else f"{v:.6f}"
-            f.write(f"{gww},{gdw},{fmt(imp.get('dry'))},{fmt(imp.get('pre_monsoon'))},"
-                    f"{fmt(imp.get('monsoon'))},{fmt(imp.get('winter'))}\n")
+            wd = windowed_by_gww.get(gww, {})
+            vals = [fmt(wd.get(w, {}).get(s)) for w in WINDOWS for s in SEASONS]
+            f.write(f"{gww},{gdw}," + ",".join(vals) + "\n")
     print(f"Written: {args.out_csv}")
+
+    with open(args.out_annual_csv, "w") as f:
+        f.write("gww_id,gdw_id,year,season,impact\n")
+        for rec in kept_records:
+            gww = str(rec.get("gww_id", ""))
+            gdw = rec.get("id", "")
+            asd = annual_seasonal_by_gww.get(gww, {})
+            for y in sorted(asd):
+                for s in SEASONS:
+                    v = asd[y].get(s)
+                    if v is not None:
+                        f.write(f"{gww},{gdw},{y},{s},{v:.6f}\n")
 
     print(f"\n  Kept (with data): {computed}")
     print(f"  Dropped (no data): {skipped}")

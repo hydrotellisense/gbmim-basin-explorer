@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-  /* ─────────────── DARK THEME (default) ─────────────── */
+  /* ─────────────── DARK THEME ─────────────── */
   :root {
     --bg:         #0b0f1a;
     --surface:    #111827;
@@ -32,7 +32,7 @@
     --nav-h:      56px;
   }
 
-  /* ─────────────── LIGHT THEME ─────────────── */
+  /* ─────────────── LIGHT THEME (default) ─────────────── */
   [data-theme="light"] {
     --bg:         #f5f7fb;
     --surface:    #ffffff;
@@ -248,6 +248,9 @@
   #ts-modal { position:fixed; inset:0; background:rgba(11,15,26,.75); backdrop-filter:blur(4px); z-index:2000; display:none; align-items:center; justify-content:center; padding:24px; animation:fadeIn .18s ease; }
   [data-theme="light"] #ts-modal { background:rgba(245,247,251,.78); }
   #ts-modal.visible { display:flex; }
+  #si-modal { position:fixed; inset:0; background:rgba(11,15,26,.75); backdrop-filter:blur(4px); z-index:2000; display:none; align-items:center; justify-content:center; padding:24px; animation:fadeIn .18s ease; }
+  [data-theme="light"] #si-modal { background:rgba(245,247,251,.78); }
+  #si-modal.visible { display:flex; }
   .ts-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; width:100%; max-width:1000px; max-height:calc(100dvh - 48px); display:flex; flex-direction:column; box-shadow:0 20px 60px var(--shadow-strong); overflow:hidden; }
   .ts-modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); flex-shrink:0; gap:12px; flex-wrap:wrap; }
   .ts-modal-title { font-family:'Bitter',serif; font-size:14px; font-weight:700; letter-spacing:.04em; color:var(--accent); }
@@ -335,17 +338,17 @@
   }
 </style>
 </head>
-<body data-theme="dark">
+<body data-theme="light">
 
 <!-- ═══════ NAV ═══════ -->
 <nav>
   <span class="nav-title">GBMIM <span>Reservoir Map</span></span>
   <div class="nav-links">
     <button class="nav-link active" onclick="showPage('map')">Map</button>
+    <button class="nav-link" onclick="window.location.href='impact.html'">Impact Tracing</button>
     <button class="nav-link" onclick="showPage('home')">Home</button>
     <button class="nav-link" onclick="showPage('howto')">How to Use</button>
     <button class="nav-link" onclick="showPage('details')">Details</button>
-    <button class="nav-link" onclick="showPage('impact')">Storage Impact Trace</button>
     <button class="nav-link" onclick="showPage('contributors')">Contributors</button>
   </div>
   <div class="nav-right">
@@ -381,8 +384,8 @@
   <div class="howto-grid">
     <div class="howto-card">
       <div class="howto-step">Step 1</div>
-      <div class="howto-title">Find a reservoir by GWW ID</div>
-      <div class="howto-body">Type any part of a <b>GWW ID</b> into the <b>Search</b> field. Matching results appear below — click one to fly to that location and load its data. You can also click any blue marker directly on the map.</div>
+      <div class="howto-title">Find a reservoir by ID</div>
+      <div class="howto-body">Type any part of a numeric ID into the <b>Search</b> field. Matching results appear below — click one to fly to that location and load its data. You can also click any blue marker directly on the map.</div>
     </div>
     <div class="howto-card">
       <div class="howto-step">Step 2</div>
@@ -458,14 +461,6 @@
   </div>
 </div>
 
-<!-- ═══════ IMPACT TRACE ═══════ -->
-<div class="page-overlay" id="page-impact" style="padding:0;">
-  <button class="close-page" onclick="showPage('map')" style="z-index:1200;">✕ Close</button>
-  <iframe id="impact-frame" title="Upstream reservoir impact trace"
-          style="border:0;width:100%;height:100%;display:block;background:var(--bg);"
-          loading="lazy"></iframe>
-</div>
-
 <!-- ═══════ CONTRIBUTORS ═══════ -->
 <div class="page-overlay" id="page-contributors">
   <button class="close-page" onclick="showPage('map')">✕ Close</button>
@@ -498,7 +493,7 @@
       </div>
 
       <div class="search-box">
-        <input id="search" type="text" placeholder="Search by GWW ID…" oninput="handleSearch()"/>
+        <input id="search" type="text" placeholder="Search by ID…" oninput="handleSearch()"/>
       </div>
       <div id="search-results"></div>
 
@@ -685,6 +680,17 @@
 
 <div id="spinner">Loading…</div>
 
+<!-- ═══════ STORAGE IMPACT MODAL ═══════ -->
+<div id="si-modal" onclick="handleImpactBackdrop(event)">
+  <div class="ts-modal-box" onclick="event.stopPropagation()" style="max-width:820px;">
+    <div class="ts-modal-head">
+      <div class="ts-modal-title" id="si-modal-title" style="color:var(--accent4);">Storage Impact</div>
+      <button class="ts-modal-close" onclick="closeImpactModal()">✕ Close</button>
+    </div>
+    <div class="ts-modal-body" id="si-modal-body"></div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ─────────────────────────────────────────────────
@@ -707,7 +713,7 @@ function getAccent4Fill(){ return getCurrentTheme()==='light'?'rgba(124,58,237,0
 // ─────────────────────────────────────────────────
 //  Theme
 // ─────────────────────────────────────────────────
-function getCurrentTheme(){ return document.body.getAttribute('data-theme')||'dark'; }
+function getCurrentTheme(){ return document.body.getAttribute('data-theme')||'light'; }
 
 function applyTheme(theme) {
   document.body.setAttribute('data-theme', theme);
@@ -730,16 +736,12 @@ function toggleTheme(){ applyTheme(getCurrentTheme()==='light'?'dark':'light'); 
 //  Nav
 // ─────────────────────────────────────────────────
 function showPage(name) {
-  ['home','howto','details','contributors','impact'].forEach(function(p){
+  ['home','howto','details','contributors'].forEach(function(p){
     document.getElementById('page-'+p).classList.toggle('visible',p===name);
   });
-  if (name==='impact') {
-    var fr=document.getElementById('impact-frame');
-    if (fr && !fr.getAttribute('src')) fr.setAttribute('src','impact.html');
-  }
   document.querySelectorAll('.nav-link').forEach(function(el){
     var label=el.textContent.toLowerCase().trim();
-    el.classList.toggle('active',label===name||(name==='howto'&&label==='how to use')||(name==='impact'&&label==='impact trace')||(name==='map'&&label==='map'));
+    el.classList.toggle('active',label===name||(name==='howto'&&label==='how to use')||(name==='map'&&label==='map'));
   });
   if (name==='map') setTimeout(function(){ map.invalidateSize(); },50);
 }
@@ -769,14 +771,14 @@ function setBasemap(bm, userInitiated) {
   var grid = document.getElementById('basemap-grid');
   BASEMAPS.forEach(function(bm){
     var div = document.createElement('div');
-    div.className = 'basemap-thumb'+(bm.id==='dark'?' active':'');
+    div.className = 'basemap-thumb'+(bm.id==='light'?' active':'');
     div.dataset.id = bm.id;
     div.innerHTML = '<div class="bm-preview" style="background:'+bm.color+'"></div><span class="bm-label">'+bm.label+'</span>';
     div.addEventListener('click',function(){ setBasemap(bm,true); });
     grid.appendChild(div);
   });
 })();
-setBasemap(BASEMAPS[0], false);
+setBasemap(BASEMAPS.find(function(b){ return b.id==='light'; }) || BASEMAPS[0], false);
 loadCountryBorders();
 function toggleMapControls(){
   var p=document.getElementById('map-control-panel'),b=document.getElementById('map-control-toggle');
@@ -847,9 +849,8 @@ function refreshAllMarkerIcons(){
 function addMarkers(data){
   data.forEach(function(r){
     if (markerMap[r.id]) return;
-    var gww = (r.gww_id!==undefined && r.gww_id!==null) ? r.gww_id : r.id;
     var m = L.marker([r.lat,r.lng],{icon:makeIcon(false)})
-      .bindTooltip('Reservoir (GWW #'+gww+')<br/>'+r.lat.toFixed(4)+', '+r.lng.toFixed(4),{direction:'top',offset:[0,-6]})
+      .bindTooltip('Reservoir #'+r.id+'<br/>'+r.lat.toFixed(4)+', '+r.lng.toFixed(4),{direction:'top',offset:[0,-6]})
       .on('click',function(){ selectFeature(r.id); });
     markerMap[r.id] = m;
   });
@@ -881,16 +882,13 @@ fetch(GEOJSON_DIR + '/reservoir_corrected/reservoir.json').then(function(r){ ret
 }).catch(function(e){ console.error('Failed to load reservoir.json:',e); });
 
 // ─────────────────────────────────────────────────
-//  Search — by GWW ID only
+//  Search
 // ─────────────────────────────────────────────────
 function handleSearch(){
   var q=document.getElementById('search').value.toLowerCase().trim();
   var box=document.getElementById('search-results');
   if(!q){ box.innerHTML=''; box.classList.remove('visible'); return; }
-  var results=RESERVOIRS.filter(function(r){
-    return r.gww_id!==undefined && r.gww_id!==null &&
-           String(r.gww_id).toLowerCase().includes(q);
-  });
+  var results=RESERVOIRS.filter(function(r){ return String(r.id).toLowerCase().includes(q); });
   box.innerHTML='';
   if(!results.length){
     box.innerHTML='<div style="padding:8px 14px;font-size:11px;color:var(--muted);">No results</div>';
@@ -898,8 +896,8 @@ function handleSearch(){
     results.slice(0,30).forEach(function(r){
       var div=document.createElement('div');
       div.className='res-item';
-      div.innerHTML='<div class="res-dot"></div><span class="res-id">#'+r.gww_id+'</span><span class="res-coords">'+r.lat.toFixed(4)+', '+r.lng.toFixed(4)+'</span>';
-      (function(rec){ div.addEventListener('click',function(){ selectFeature(rec.id); document.getElementById('search').value='#'+rec.gww_id; box.classList.remove('visible'); }); })(r);
+      div.innerHTML='<div class="res-dot"></div><span class="res-id">#'+r.id+'</span><span class="res-coords">'+r.lat.toFixed(4)+', '+r.lng.toFixed(4)+'</span>';
+      (function(id){ div.addEventListener('click',function(){ selectFeature(id); document.getElementById('search').value='#'+id; box.classList.remove('visible'); }); })(r.id);
       box.appendChild(div);
     });
   }
@@ -953,6 +951,7 @@ function clearSelection(){
   document.getElementById('ts-card').className='';
   document.getElementById('st-card').className='';
   closeTimeSeriesModal();
+  closeImpactModal();
 }
 
 function selectFeature(id){
@@ -979,12 +978,149 @@ function selectFeature(id){
   });
 }
 
+// ─────────────────────────────────────────────────
+//  Storage Impact (windowed × seasonal)
+// ─────────────────────────────────────────────────
+var SI_SEASONS = [['dry','Dry','#fbbf24','Jan–Mar'],['pre_monsoon','Pre-Monsoon','#4ade80','Apr–Jun'],
+                  ['monsoon','Monsoon','#38bdf8','Jul–Sep'],['winter','Winter','#a78bfa','Oct–Dec']];
+var siWindow = null;   // currently selected window label
+
+function getImpactWindows(res){
+  if(!res || !res.impact) return [];
+  return Object.keys(res.impact);
+}
+
+function buildImpactHtml(res){
+  var windows = getImpactWindows(res);
+  if(!windows.length) return '';
+  if(!siWindow || windows.indexOf(siWindow)<0) siWindow = windows[windows.length-1];
+  var wdata = res.impact[siWindow] || {};
+
+  var vals = SI_SEASONS.map(function(s){
+    var v = wdata[s[0]];
+    return (v===undefined||v===null)?null:Number(v);
+  });
+  var maxAbs = Math.max.apply(null, vals.filter(function(v){return v!==null;})
+                                        .map(Math.abs).concat([0]));
+
+  var opts = windows.map(function(w){
+    return '<option value="'+w+'"'+(w===siWindow?' selected':'')+'>'+w+'</option>';
+  }).join('');
+
+  var html='<div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--border);">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:7px;">'+
+      '<span style="font-family:\'Bitter\',serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent4);">Storage Impact</span>'+
+      '<span style="display:flex;align-items:center;gap:4px;">'+
+        '<select onchange="onImpactWindowChange(this.value)" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:\'Bitter\',serif;font-size:9px;font-weight:600;padding:2px 5px;cursor:pointer;outline:none;">'+opts+'</select>'+
+        '<button onclick="openImpactModal()" title="Show all windows" style="background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:\'Bitter\',serif;font-size:9px;font-weight:600;padding:2px 6px;cursor:pointer;">⛶ Expand</button>'+
+      '</span>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+
+  SI_SEASONS.forEach(function(s,i){
+    var v=vals[i], valStr, barW, barCol, valCol;
+    if(v===null){
+      valStr='<span style="color:var(--muted);font-style:italic;font-size:11px;">n/a</span>';
+      barW=0; barCol='var(--muted)'; valCol='var(--text)';
+    } else {
+      var a=Math.abs(v), dp=a>=100?0:a>=10?1:2;
+      valStr=(v>0?'+':'')+v.toFixed(dp);
+      barW=maxAbs>0?(a/maxAbs*100):0;
+      barCol = v>0 ? 'var(--accent2)' : v<0 ? 'var(--accent3)' : 'var(--muted)';
+      valCol = v>0 ? 'var(--accent2)' : v<0 ? 'var(--accent3)' : 'var(--text)';
+    }
+    html+='<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;position:relative;overflow:hidden;">'+
+      '<div style="font-family:\'Bitter\',serif;font-size:8.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:'+s[2]+';flex-shrink:0;"></span>'+s[1]+' <span style="font-family:\'Inter\';font-weight:400;text-transform:none;letter-spacing:0;opacity:.7;">'+s[3]+'</span></div>'+
+      '<div style="font-family:\'Bitter\',serif;font-size:14px;font-weight:700;color:'+valCol+';line-height:1;">'+valStr+'</div>'+
+      '<div style="position:absolute;bottom:0;left:0;height:2px;background:'+barCol+';opacity:.6;width:'+barW+'%;"></div>'+
+    '</div>';
+  });
+  html+='</div></div>';
+  return html;
+}
+
+function onImpactWindowChange(w){
+  siWindow = w;
+  if(!activeId) return;
+  var res = RESERVOIRS.find(function(r){ return r.id===activeId; });
+  var target = document.getElementById('si-block');
+  if(target) target.outerHTML = '<div id="si-block">'+buildImpactHtml(res)+'</div>';
+}
+
+function openImpactModal(){
+  if(!activeId) return;
+  var res = RESERVOIRS.find(function(r){ return r.id===activeId; });
+  var windows = getImpactWindows(res);
+  if(!windows.length) return;
+
+  var MONTHS = {dry:'Jan–Mar', pre_monsoon:'Apr–Jun', monsoon:'Jul–Sep', winter:'Oct–Dec'};
+
+  // Global max magnitude across all windows+seasons for consistent bar scaling
+  var allAbs=[];
+  windows.forEach(function(w){
+    SI_SEASONS.forEach(function(s){
+      var v=res.impact[w][s[0]];
+      if(v!==null && v!==undefined) allAbs.push(Math.abs(Number(v)));
+    });
+  });
+  var gmax = Math.max.apply(null, allAbs.concat([0]));
+
+  var html='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:separate;border-spacing:6px;font-family:\'Inter\',sans-serif;">'+
+    '<thead><tr><th style="text-align:left;font-family:\'Bitter\',serif;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 4px;">Window</th>';
+  SI_SEASONS.forEach(function(s){
+    html+='<th style="font-family:\'Bitter\',serif;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:0 4px;">'+
+      '<div style="display:inline-flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:'+s[2]+';"></span>'+s[1]+'</div>'+
+      '<div style="font-family:\'Inter\',sans-serif;font-size:9px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted);opacity:.75;margin-top:2px;">'+MONTHS[s[0]]+'</div>'+
+    '</th>';
+  });
+  html+='</tr></thead><tbody>';
+
+  windows.forEach(function(w){
+    html+='<tr><td style="font-family:\'Bitter\',serif;font-size:12px;font-weight:600;color:var(--accent4);white-space:nowrap;padding:0 4px;">'+w+'</td>';
+    SI_SEASONS.forEach(function(s){
+      var raw=res.impact[w][s[0]];
+      var v=(raw!==null && raw!==undefined)?Number(raw):null;
+      var valStr,barW,barCol,valCol,label='';
+      if(v===null){
+        valStr='<span style="color:var(--muted);font-style:italic;font-size:12px;">n/a</span>';
+        barW=0; barCol='var(--muted)'; valCol='var(--text)';
+      } else {
+        var a=Math.abs(v), dp=a>=100?0:a>=10?1:2;
+        valStr=(v>0?'+':'')+v.toFixed(dp);
+        barW=gmax>0?(a/gmax*100):0;
+        barCol = v>0 ? 'var(--accent2)' : v<0 ? 'var(--accent3)' : 'var(--muted)';
+        valCol = v>0 ? 'var(--accent2)' : v<0 ? 'var(--accent3)' : 'var(--text)';
+        label='<div style="font-size:10px;color:var(--muted);margin-top:3px;">'+
+              (v>0?'stored':v<0?'released':'no change')+'</div>';
+      }
+      html+='<td style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;position:relative;overflow:hidden;min-width:90px;">'+
+        '<div style="font-family:\'Bitter\',serif;font-size:16px;font-weight:700;color:'+valCol+';line-height:1;">'+valStr+'</div>'+label+
+        '<div style="position:absolute;bottom:0;left:0;height:2px;background:'+barCol+';opacity:.6;width:'+barW+'%;"></div>'+
+      '</td>';
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>'+
+    '<div style="margin-top:14px;font-size:11px;color:var(--muted);line-height:1.7;">'+
+      'Each value covers a full three-month season, averaged over the years in that window. It compares the change in the reservoir\'s stored water across the season against the total water flowing in from its catchment during those same three months.<br/><br/>'+
+      'A <span style="color:var(--accent2);font-weight:600;">positive</span> value means the reservoir ended the season <b style="color:var(--text);">fuller than it started</b> — it held back part of the incoming flow, so less water reached the river downstream. <br/><br/>'+
+      'A <span style="color:var(--accent3);font-weight:600;">negative</span> value means the reservoir ended the season <b style="color:var(--text);">emptier than it started</b> — it released stored water from earlier in the year, so the river downstream received <b style="color:var(--text);">more</b> water than the catchment alone supplied.<br/><br/>'+
+      'Values near zero mean the reservoir passed inflow through with little change to storage.'+
+    '</div>';
+
+  document.getElementById('si-modal-title').textContent='Storage Impact — Reservoir #'+(res.gww_id||activeId);
+  document.getElementById('si-modal-body').innerHTML=html;
+  document.getElementById('si-modal').classList.add('visible');
+}
+
+function closeImpactModal(){ document.getElementById('si-modal').classList.remove('visible'); }
+function handleImpactBackdrop(e){ if(e.target.id==='si-modal') closeImpactModal(); }
+
 function updateCard(id,res,hasWS,hasDS,hasST,loading){
   var card=document.getElementById('info-card');
-  var gwwLoad = res ? (res.gww_id||id) : id;
   card.className=loading?'active':'active';
   if(loading){
-    card.innerHTML='<div class="ic-title">Reservoir #'+gwwLoad+'</div><span class="badge badge-loading">&#8635; Loading…</span>';
+    card.innerHTML='<div class="ic-title">Reservoir #'+id+'</div><span class="badge badge-loading">&#8635; Loading…</span>';
     return;
   }
   function row(label,val,color){
@@ -997,29 +1133,8 @@ function updateCard(id,res,hasWS,hasDS,hasST,loading){
   var arealRaw=res['Areal_Impact']||res['Areal_Impact (%)']||res['areal_impact']||'';
   var arealVal=arealRaw?String(arealRaw).replace(/%$/,'')+'%':'';
 
-  // Seasonal storage impact block
-  var seasons=[['dry','Dry','#fbbf24'],['pre_monsoon','Pre-Monsoon','#4ade80'],['monsoon','Monsoon','#38bdf8'],['winter','Winter','#a78bfa']];
-  var siVals=seasons.map(function(s){ var v=res[s[0]]; return (v===undefined||v===null)?null:Number(v); });
-  var siAny=siVals.some(function(v){ return v!==null; });
-  var siHtml='';
-  if(siAny){
-    var siMax=Math.max.apply(null,siVals.filter(function(v){return v!==null;}).concat([0]));
-    siHtml='<div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--border);">'+
-      '<div style="font-family:\'Bitter\',serif;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent4);margin-bottom:7px;">Storage Impact <span style="font-family:\'Inter\';font-size:9px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--muted);">storage / seasonal runoff</span></div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
-    seasons.forEach(function(s,i){
-      var v=siVals[i];
-      var valStr,barW;
-      if(v===null){ valStr='<span style="color:var(--muted);font-style:italic;font-size:11px;">n/a</span>'; barW=0; }
-      else { var dp=v>=100?0:v>=10?1:2; valStr=v.toFixed(dp); barW=siMax>0?(v/siMax*100):0; }
-      siHtml+='<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 8px;position:relative;overflow:hidden;">'+
-        '<div style="font-family:\'Bitter\',serif;font-size:8.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;gap:4px;"><span style="width:6px;height:6px;border-radius:50%;background:'+s[2]+';flex-shrink:0;"></span>'+s[1]+'</div>'+
-        '<div style="font-family:\'Bitter\',serif;font-size:14px;font-weight:700;color:var(--text);line-height:1;">'+valStr+'</div>'+
-        '<div style="position:absolute;bottom:0;left:0;height:2px;background:var(--accent4);opacity:.5;width:'+barW+'%;"></div>'+
-      '</div>';
-    });
-    siHtml+='</div></div>';
-  }
+  // Seasonal storage impact — windowed (nested impact object)
+  var siHtml = buildImpactHtml(res);
 
   card.innerHTML=
     '<div class="ic-title">Reservoir #'+gwwId+
@@ -1038,7 +1153,7 @@ function updateCard(id,res,hasWS,hasDS,hasST,loading){
       '<span class="badge '+(hasDS?'badge-ds':'badge-none')+'">'+(hasDS?'&#10003; Downstream':'&#10007; No path')+'</span> '+
       (hasST!==null?'<span class="badge '+(hasST?'badge-st':'badge-none')+'">'+(hasST?'&#10003; Storage':'&#10007; No storage')+'</span>':'')+
     '</div>'+
-    siHtml;
+    '<div id="si-block">'+siHtml+'</div>';
 }
 
 // ─────────────────────────────────────────────────
@@ -1192,9 +1307,8 @@ function openTsModal(type){
   if(!data) return;
   var modal=document.getElementById('ts-modal');
   var res=RESERVOIRS.find(function(r){ return r.id===activeId; });
-  var gwwTitle = res ? (res.gww_id||activeId) : activeId;
   // Title
-  document.getElementById('ts-modal-title').textContent=(isStorage?'Storage — ':'Runoff — ')+'Reservoir #'+gwwTitle;
+  document.getElementById('ts-modal-title').textContent=(isStorage?'Storage — ':'Runoff — ')+'Reservoir #'+activeId;
   document.getElementById('ts-modal-title').style.color=isStorage?getAccent4():getAccent();
   // Sub
   var subEl=document.getElementById('ts-modal-sub'), parts=[];
@@ -1327,7 +1441,7 @@ function renderModalEmpty(){
 
 function closeTimeSeriesModal(){ document.getElementById('ts-modal').classList.remove('visible'); }
 function handleModalBackdropClick(e){ if(e.target.id==='ts-modal') closeTimeSeriesModal(); }
-document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeTimeSeriesModal(); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ closeTimeSeriesModal(); closeImpactModal(); } });
 
 // ─────────────────────────────────────────────────
 //  Panel toggle + Resize

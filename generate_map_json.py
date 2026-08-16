@@ -8,10 +8,6 @@ import pandas as pd
 import geopandas as gpd
 
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
-
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -37,10 +33,6 @@ def parse_args():
     return p.parse_args()
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def norm_id(val) -> str | None:
     if val is None or (isinstance(val, float) and pd.isna(val)):
         return None
@@ -57,10 +49,6 @@ def parse_bar_ids(raw) -> list[str]:
     parts = str(raw).replace(";", ",").split(",")
     return [x for x in (norm_id(p.strip()) for p in parts) if x]
 
-
-# ---------------------------------------------------------------------------
-# Loaders
-# ---------------------------------------------------------------------------
 
 def load_gpkg(gpkg_path: str, layer: str | None) -> gpd.GeoDataFrame:
     layers = fiona.listlayers(gpkg_path)
@@ -173,10 +161,6 @@ def geom_to_feature(geom, fid: str) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
 def main():
     args = parse_args()
 
@@ -188,22 +172,14 @@ def main():
     if args.line_simplify > 0:
         print(f"  Downstream simplification: {args.line_simplify} deg")
 
-    # ------------------------------------------------------------------
-    # Step 1 — Scan storage directory (authoritative list of GWW ids)
-    # ------------------------------------------------------------------
     print(f"\n[1] Scanning storage directory: {args.storage_dir}")
     storage_index = scan_storage_dir(args.storage_dir)  # {gww_id: filepath}
 
-    # ------------------------------------------------------------------
-    # Step 2 — Load geopackage (all rows, no filtering yet)
-    # ------------------------------------------------------------------
     print(f"\n[2] Loading geopackage: {args.gpkg}")
     if not os.path.exists(args.gpkg):
         sys.exit(f"[ERROR] GeoPackage not found: {args.gpkg}")
     gdf = load_gpkg(args.gpkg, args.gpkg_layer)
 
-    # Build GWW_reservoir_id → gpkg row lookup
-    # For duplicate GWW ids, prefer the row with a valid GDW_ID
     gww_to_row: dict[str, pd.Series] = {}
     for _, row in gdf.iterrows():
         val = str(row.get("GWW_reservoir_id", "")).strip()
@@ -211,7 +187,6 @@ def main():
             continue
         gww = val.lstrip("0") or "0"
         existing = gww_to_row.get(gww)
-        # Prefer row with non-null GDW_ID
         if existing is None:
             gww_to_row[gww] = row
         elif pd.isna(existing["GDW_ID"]) and pd.notna(row["GDW_ID"]):
@@ -219,18 +194,12 @@ def main():
 
     print(f"  Unique GWW ids in gpkg: {len(gww_to_row)}")
 
-    # ------------------------------------------------------------------
-    # Step 3 — Load metadata CSVs
-    # ------------------------------------------------------------------
     print(f"\n[3] Loading metadata CSVs")
     res_lookup = load_csv_lookup(args.reservoirs_csv, "Reservoir")
     bar_lookup = load_csv_lookup(args.barriers_csv,   "Barrier")
     print(f"  Reservoir CSV: {len(res_lookup)} rows")
     print(f"  Barrier CSV  : {len(bar_lookup)} rows")
 
-    # ------------------------------------------------------------------
-    # Step 4 — Build coordinate records
-    # ------------------------------------------------------------------
     print(f"\n[4] Building coordinate records")
     coord_records = []
     src_counts = {"gdw_id": 0, "bar_id": 0, "skipped": 0}
@@ -242,18 +211,15 @@ def main():
             src_counts["skipped"] += 1
             continue
 
-        # Determine canonical feature id
         gdw = norm_id(gpkg_row.get("GDW_ID"))
 
         if gdw:
-            # 3a — valid GDW_ID
             fid = gdw
             csv_row = res_lookup.get(fid)
             if csv_row is None:
                 csv_row = bar_lookup.get(fid)
             id_src = "gdw_id"
         else:
-            # 3b — null GDW_ID: try GDW_bar_ids
             bar_ids = parse_bar_ids(gpkg_row.get("GDW_bar_ids"))
             fid = None
             csv_row = None
@@ -270,7 +236,6 @@ def main():
                 continue
             id_src = "bar_id"
 
-        # Coordinates: gpkg first, CSV as fallback
         lat = gpkg_row.get("LAT_DAM") or gpkg_row.get("LAT_RIV")
         lng = gpkg_row.get("LONG_DAM") or gpkg_row.get("LONG_RIV")
         if (not lat or pd.isna(lat) or not lng or pd.isna(lng)) and csv_row is not None:
@@ -305,7 +270,6 @@ def main():
     # Write reservoir.json (strip internal keys before writing, but keep gww_id)
     public_records = [{k: v for k, v in r.items() if not k.startswith("_") or k == "_gww_id"}
                       for r in coord_records]
-    # Rename _gww_id → gww_id in public output
     for rec in public_records:
         if "_gww_id" in rec:
             rec["gww_id"] = rec.pop("_gww_id")
@@ -314,9 +278,6 @@ def main():
         json.dump(public_records, f, separators=(",", ":"))
     print(f"  Written: {coords_path}  ({os.path.getsize(coords_path)/1024:.1f} KB)")
 
-    # ------------------------------------------------------------------
-    # Step 5-8 — Per-feature files
-    # ------------------------------------------------------------------
     print(f"\n[5-8] Writing per-feature files → {res_dir}/")
     downstream_dirs = [args.reservoirs_downstream_dir, args.barriers_downstream_dir]
     runoff_dirs     = [args.runoff_reservoir_dir, args.runoff_barrier_dir]
