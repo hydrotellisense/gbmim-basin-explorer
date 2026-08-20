@@ -30,6 +30,10 @@
     --panel-min:  260px;
     --panel-max:  640px;
     --nav-h:      56px;
+    --subnav-h:   42px;
+    --subnav-bg:      #0e1626;
+    --subnav-border:  #1c2740;
+    --subnav-fg:      #8fa3bd;
   }
 
   /* ─────────────── LIGHT THEME (default) ─────────────── */
@@ -44,6 +48,9 @@
     --accent4:    #7c3aed;
     --text:       #0f172a;
     --muted:      #64748b;
+    --subnav-bg:      #fff4ec;
+    --subnav-border:  #f6d9c4;
+    --subnav-fg:      #9a5a2c;
     --map-bg:     #e5ebf2;
     --tooltip-stroke: #ffffff;
     --grid-line:  #d8dee8;
@@ -68,12 +75,22 @@
   /* ══ NAV ══ */
   nav {
     height: var(--nav-h);
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    background: #000000;
+    border-bottom: 3px solid #38bdf8;
     display: flex; align-items: center; justify-content: center;
     padding: 0 28px; flex-shrink: 0; z-index: 1000; position: relative;
-    transition: background-color .25s ease, border-color .25s ease;
   }
+  /* Nav stays black in both themes, so its contents use fixed light colours. */
+  nav .nav-title { color:#f1f5f9; }
+  nav .nav-title span { color:#38bdf8; }
+  nav .nav-link { color:#94a3b8; }
+  nav .nav-link:hover { color:#ffffff; background:rgba(255,255,255,.08); }
+  nav .nav-link.active { color:#38bdf8; background:rgba(56,189,248,.14); }
+  [data-theme="light"] nav .nav-link.active { color:#38bdf8; background:rgba(56,189,248,.14); }
+  nav .nav-badge { color:#38bdf8; background:rgba(56,189,248,.12); border-color:rgba(56,189,248,.3); }
+  [data-theme="light"] nav .nav-badge { color:#38bdf8; background:rgba(56,189,248,.12); border-color:rgba(56,189,248,.3); }
+  nav #theme-toggle { background:rgba(255,255,255,.06); border-color:#2a3348; color:#94a3b8; }
+  nav #theme-toggle:hover { color:#38bdf8; border-color:#38bdf8; }
   .nav-title { position:absolute; left:28px; font-family:'Bitter',serif; font-size:16px; font-weight:700; color:var(--text); letter-spacing:.02em; white-space:nowrap; }
   .nav-title span { color:var(--accent); }
   .nav-links { display:flex; align-items:center; gap:4px; }
@@ -95,7 +112,19 @@
   @media (max-width:560px) { .nav-title span{display:none;} .nav-link{padding:6px 8px;font-size:10px;} }
 
   /* ══ PAGE OVERLAYS ══ */
-  .page-overlay { position:fixed; inset:var(--nav-h) 0 0 0; background:var(--bg); z-index:800; display:none; overflow-y:auto; padding:48px 64px; animation:fadeIn .2s ease; }
+  .page-overlay { position:fixed; inset:calc(var(--nav-h) + var(--subnav-h)) 0 0 0; background:var(--bg); z-index:800; display:none; overflow-y:auto; padding:48px 64px; animation:fadeIn .2s ease; }
+
+  /* sub-nav bar (centered, distinct tint so it reads as secondary to the main nav) */
+  #subnav { height:var(--subnav-h); display:flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--subnav-bg); border-bottom:1px solid var(--subnav-border); flex-shrink:0;
+    position:relative; z-index:850; transition:background-color .25s ease,border-color .25s ease; }
+  #subnav .subtab { font-family:'Bitter',serif; font-size:11.5px; font-weight:600; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--subnav-fg); padding:6px 20px; border-radius:20px;
+    border:1px solid transparent; background:none; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    transition:color .15s,background .15s,border-color .15s; }
+  #subnav .subtab:hover { color:var(--accent3); background:rgba(251,146,60,.12); }
+  #subnav .subtab.active { color:#fff; background:var(--accent3); border-color:var(--accent3); font-weight:700; }
+  [data-theme="light"] #subnav .subtab.active { color:#fff; }
   :root:not([data-theme="light"]) .page-overlay { background:rgba(11,15,26,.97); }
   [data-theme="light"] .page-overlay { background:rgba(245,247,251,.98); }
   @media (max-width:700px) { .page-overlay{padding:28px 20px;} }
@@ -113,8 +142,13 @@
   .contributor-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:flex; align-items:center; justify-content:center; font-family:'Bitter',serif; font-size:15px; font-weight:700; color:#fff; flex-shrink:0; }
   .contributor-name { font-size:13px; font-weight:500; color:var(--text); }
   .contributor-role { font-size:11px; color:var(--muted); margin-top:2px; }
-  .close-page { position:fixed; top:calc(var(--nav-h) + 16px); right:24px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--muted); padding:6px 14px; font-size:12px; cursor:pointer; z-index:900; }
+  .close-page { position:fixed; top:calc(var(--nav-h) + var(--subnav-h) + 16px); right:24px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--muted); padding:6px 14px; font-size:12px; cursor:pointer; z-index:900; }
   .close-page:hover { color:var(--text); }
+  /* Impact overlay: fill the whole area below the nav, no padding, embed the standalone page. */
+  .page-overlay-flush { padding:0 !important; overflow:hidden; }
+  #page-impact { inset:var(--nav-h) 0 0 0; }  /* impact has its own sub-nav inside the iframe */
+  #impact-frame { width:100%; height:100%; border:0; display:block; background:var(--bg); }
+  @media (max-width:700px) { .page-overlay-flush { padding:0 !important; } }
 
   /* ── How To Use ── */
   .howto-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; max-width:1800px; margin-bottom:32px; }
@@ -344,10 +378,9 @@
 <nav>
   <span class="nav-title">GBMIM <span>Reservoir Map</span></span>
   <div class="nav-links">
-    <button class="nav-link active" onclick="showPage('map')">Map</button>
-    <button class="nav-link" onclick="window.location.href='impact.html'">Impact Tracing</button>
-    <button class="nav-link" onclick="showPage('home')">Home</button>
-    <button class="nav-link" onclick="showPage('howto')">How to Use</button>
+    <button class="nav-link active" onclick="showPage('map')">Home</button>
+    <button class="nav-link" onclick="showPage('impact')">Impact Tracing</button>
+    <button class="nav-link" onclick="showPage('home')">Summary</button>
     <button class="nav-link" onclick="showPage('details')">Details</button>
     <button class="nav-link" onclick="showPage('contributors')">Contributors</button>
   </div>
@@ -358,6 +391,12 @@
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
   </div>
+</nav>
+
+<!-- ═══════ SUB-NAV ═══════ -->
+<nav id="subnav">
+  <button class="subtab active" id="subtab-map" onclick="showPage('map')">🗺 Map</button>
+  <button class="subtab" id="subtab-howto" onclick="showPage('howto')">📖 How to read</button>
 </nav>
 
 <!-- ═══════ HOME ═══════ -->
@@ -481,6 +520,12 @@
       <div><div class="contributor-name">Institution</div><div class="contributor-role">Sponsoring Organization</div></div>
     </div>
   </div>
+</div>
+
+<!-- ═══════ IMPACT TRACING (embedded, no navigation) ═══════ -->
+<div class="page-overlay page-overlay-flush" id="page-impact">
+  <button class="close-page" onclick="showPage('map')" style="z-index:2;">✕ Close</button>
+  <iframe id="impact-frame" title="Upstream Impact Tracing" loading="lazy"></iframe>
 </div>
 
 <!-- ═══════ WORKSPACE ═══════ -->
@@ -736,14 +781,37 @@ function toggleTheme(){ applyTheme(getCurrentTheme()==='light'?'dark':'light'); 
 //  Nav
 // ─────────────────────────────────────────────────
 function showPage(name) {
-  ['home','howto','details','contributors'].forEach(function(p){
+  ['home','howto','details','contributors','impact'].forEach(function(p){
     document.getElementById('page-'+p).classList.toggle('visible',p===name);
   });
   document.querySelectorAll('.nav-link').forEach(function(el){
     var label=el.textContent.toLowerCase().trim();
-    el.classList.toggle('active',label===name||(name==='howto'&&label==='how to use')||(name==='map'&&label==='map'));
+    el.classList.toggle('active',
+      label===name ||
+      (name==='map'&&label==='map') ||
+      (name==='impact'&&label==='impact tracing'));
   });
+  // Sub-nav highlight: How-to-read active only on the howto page; Map stays the default otherwise.
+  var stMap=document.getElementById('subtab-map');
+  var stHow=document.getElementById('subtab-howto');
+  if(stHow) stHow.classList.toggle('active',name==='howto');
+  if(stMap) stMap.classList.toggle('active',name!=='howto');
+  // The impact page has its own sub-nav inside the iframe — hide this one there.
+  var sn=document.getElementById('subnav');
+  if(sn) sn.style.display = (name==='impact') ? 'none' : 'flex';
+  if (name==='impact') loadImpactFrame();
   if (name==='map') setTimeout(function(){ map.invalidateSize(); },50);
+}
+
+// Load the standalone impact page into the overlay iframe the first time it's
+// opened, and keep its theme in sync. impact.html stays a separate file.
+function loadImpactFrame(){
+  var f=document.getElementById('impact-frame');
+  if(!f) return;
+  var theme=getCurrentTheme();
+  if(!f.getAttribute('src')){
+    f.src='impact.html?theme='+encodeURIComponent(theme);
+  }
 }
 
 // ─────────────────────────────────────────────────
