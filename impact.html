@@ -174,6 +174,11 @@
   .empty{font-size:13px;color:var(--muted);line-height:1.55;padding:8px 0}
   .hint{font-size:13px;color:var(--muted);line-height:1.55}
   .error{font-size:12px;color:#9b3d2d;line-height:1.5;padding:9px 11px;background:#fff2ef;border-radius:7px}
+  .headwaternote{text-align:center;padding:26px 18px;border:1px solid var(--line);border-radius:12px;
+    background:linear-gradient(180deg,#f4f9fe,#ffffff);margin:2px 0 4px}
+  .headwaternote .hw-icon{font-size:30px;line-height:1;margin-bottom:10px}
+  .headwaternote .hw-title{font-size:15px;font-weight:750;color:var(--selected);margin-bottom:8px}
+  .headwaternote .hw-body{font-size:12.5px;color:var(--muted);line-height:1.55;max-width:280px;margin:0 auto}
   #reset{margin-top:14px;width:100%;padding:10px;background:var(--bg);color:var(--text);
     border:1px solid var(--line);border-radius:8px;font-size:12.5px;cursor:pointer;font-weight:500}
   #reset:hover{border-color:var(--trace);color:var(--trace)}
@@ -182,6 +187,12 @@
     border-radius:8px;padding:8px 10px;font-size:10.5px;line-height:1.55;color:var(--muted);
     box-shadow:0 1px 6px rgba(20,40,60,.10)}
   .maplegend b{color:var(--text)}
+  .releaselegend{max-width:210px}
+  .releaselegend b{display:block;margin-bottom:6px;font-size:10.5px}
+  .rl-bar{height:11px;border-radius:6px;border:1px solid rgba(100,120,140,.3)}
+  .rl-scale{display:flex;justify-content:space-between;margin-top:4px;font-size:9.5px;color:var(--muted);line-height:1.25}
+  .rl-scale span:last-child{text-align:right}
+  .rl-note{margin-top:6px;font-size:9px;color:var(--muted);line-height:1.35}
   .legend-system{display:inline-block;width:22px;height:13px;border-radius:10px;
     border:2px solid var(--family);background:var(--family-fill);
     vertical-align:-3px;margin-right:6px}
@@ -497,7 +508,7 @@ const WINDOWS = [
   ["2016–2021", 2016, 2021]
 ];
 
-let map, edgeLayer, arrowLayer, familyLayer, nodeLayer;
+let map, edgeLayer, arrowLayer, familyLayer, nodeLayer, releaseLegend;
 let nodesById = {}, ancestorIndex = {}, attrs = {};
 let selected = null, activeSeason = "monsoon", activeWindow = null;
 let traceCtx = null, nodeLayerById = {};
@@ -520,6 +531,31 @@ function initMap(){
     return d;
   };
   legend.addTo(map);
+
+  // Release-gradient legend (shown only when a reservoir is selected).
+  releaseLegend=L.control({position:"bottomright"});
+  releaseLegend.onAdd=()=>{
+    const d=L.DomUtil.create("div","maplegend releaselegend");
+    d.id="releaseLegend";
+    d.style.display="none";
+    return d;
+  };
+  releaseLegend.addTo(map);
+}
+
+/* Fill / show / hide the release-gradient legend. */
+function updateReleaseLegend(dd){
+  const el=document.getElementById("releaseLegend");
+  if(!el) return;
+  if(!dd || !(dd.max>0)){ el.style.display="none"; return; }
+
+  const stops=RELEASE_RAMP.join(",");
+  el.innerHTML=
+    `<b>Water released by upstream reservoir</b><br>`+
+    `<div class="rl-bar" style="background:linear-gradient(90deg,${stops})"></div>`+
+    `<div class="rl-scale"><span>least<br>released</span><span>most<br>released</span></div>`+
+    `<div class="rl-note">Darker edge = its upstream reservoir released more this season (max ${fmt(dd.max,0)} million m³)</div>`;
+  el.style.display="block";
 }
 
 function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
@@ -740,8 +776,71 @@ function refreshArrow(l,color,opacity,pixelSize=7){
   arrowLayer.addLayer(dec);
 }
 
-function setEdgeStyle(l,mode="base"){
-  if(mode==="trace"){
+/* ---- release gradient (edge colouring when a reservoir is selected) ----
+   Maps a normalised release amount t∈[0,1] to a pale→intense ramp.
+   Low release = pale yellow, high release = deep red. */
+function lerp(a,b,t){ return a+(b-a)*t; }
+function hex2rgb(h){ h=h.replace("#",""); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function rgb2css(r){ return `rgb(${Math.round(r[0])},${Math.round(r[1])},${Math.round(r[2])})`; }
+const RELEASE_RAMP=["#fde7c9","#fbd89a","#f7c667","#f3a948","#ef8f3c","#e57032","#d6532b","#c13f26","#a82c22","#8f1d1d"]; // low → high
+function releaseColor(t){
+  t=Math.max(0,Math.min(1,t));
+  const seg=(RELEASE_RAMP.length-1)*t;
+  const i=Math.min(Math.floor(seg),RELEASE_RAMP.length-2);
+  const f=seg-i;
+  const a=hex2rgb(RELEASE_RAMP[i]), b=hex2rgb(RELEASE_RAMP[i+1]);
+  return rgb2css([lerp(a[0],b[0],f),lerp(a[1],b[1],f),lerp(a[2],b[2],f)]);
+}
+
+/* Release (drawdown) volume, in million m³, per upstream source for the
+   current window + season. Only storage decreases count as a release. */
+/* Release (drawdown) volume, in million m³, per upstream source for the
+   current window + season. Only storage decreases count as a release.
+   We also assign each *releasing* reservoir a rank-based position on the
+   colour ramp (0 = most released → 1 = least released) so the gradient
+   steps evenly through the reservoirs instead of collapsing when one
+   reservoir dominates the raw magnitudes. */
+/* Release (drawdown) volume, in million m³, per upstream source for the
+   current window + season. Only storage decreases count as a release.
+   Each releasing reservoir is quantised into one of BINS discrete colour
+   bins by its release magnitude, so the gradient steps through 10 shades. */
+const RELEASE_BINS=10;
+function buildDrawdownMap(data,win,season){
+  const s=windowSeason(data,win[1],win[2],season);
+  const map={}; let max=0;
+  const releasers=[];
+  for(const src of (s?.sources||[])){
+    const id=String(src.gww_id);
+    const ch=num(src.change_mcm);
+    const rel=(ch!=null && ch<0) ? -ch : 0;   // release = drawdown magnitude
+    map[id]=rel;
+    if(rel>max) max=rel;
+    if(rel>0) releasers.push({id,rel});
+  }
+
+  // Assign each releaser to one of RELEASE_BINS bins by magnitude,
+  // then map the bin to a t on the ramp (bin 0 = lightest, last = darkest).
+  const bin={};
+  for(const r of releasers){
+    let b = max>0 ? Math.floor((r.rel/max)*RELEASE_BINS) : 0;
+    if(b>=RELEASE_BINS) b=RELEASE_BINS-1;      // top value lands in last bin
+    bin[r.id]=b;
+  }
+  // t per bin: lightest bin still clearly tinted (0.12) → darkest (1)
+  function binT(b){ return RELEASE_BINS<=1 ? 1 : 0.12 + 0.88*(b/(RELEASE_BINS-1)); }
+
+  const rank={};
+  for(const id in bin) rank[id]=binT(bin[id]);
+
+  return {map,max,rank,bin,bins:RELEASE_BINS};
+}
+
+function setEdgeStyle(l,mode="base",color2){
+  if(mode==="gradient"){
+    const color=color2||getCss("--trace");
+    l.setStyle({color,weight:4.6,opacity:1,dashArray:null,lineCap:"round"});
+    refreshArrow(l,color,1,9);
+  }else if(mode==="trace"){
     const color=getCss("--trace");
     l.setStyle({color,weight:4,opacity:1,dashArray:null,lineCap:"round"});
     refreshArrow(l,color,1,9);
@@ -827,7 +926,27 @@ function styleEdgeForTrace(l){
     setEdgeStyle(l,"base");
     return;
   }
-  setEdgeStyle(l,edgeOn(l)?"trace":"dim");
+  if(!edgeOn(l)){
+    setEdgeStyle(l,"dim");
+    return;
+  }
+  // On-route edge: colour by the release (drawdown) of its upstream reservoir,
+  // using its rank among releasers so each step is visually distinct.
+  const dd=traceCtx.drawdown;
+  if(dd && dd.max>0){
+    const from=String(l.feature.properties.from_id);
+    const rel=dd.map[from];
+    if(rel!=null){
+      if(rel>0 && dd.rank[from]!=null){
+        setEdgeStyle(l,"gradient",releaseColor(dd.rank[from]));
+      }else{
+        // no release this season (reservoir filled or was flat) → palest
+        setEdgeStyle(l,"gradient",releaseColor(0));
+      }
+      return;
+    }
+  }
+  setEdgeStyle(l,"trace");
 }
 
 function resetHighlight(){
@@ -836,6 +955,7 @@ function resetHighlight(){
   edgeLayer.eachLayer(styleEdgeForTrace);
   nodeLayer.eachLayer(styleNodeForTrace);
   styleFamilySystems();
+  updateReleaseLegend(null);
   renderIdle();
 }
 
@@ -865,6 +985,12 @@ async function select(X){
       }
       if(activeWindow==null) activeWindow=WINDOWS[WINDOWS.length-1][0];
     }
+
+    // Colour the trace edges by each upstream reservoir's release for the
+    // current period + season.
+    traceCtx.drawdown=buildDrawdownMap(data,activeWin(),activeSeason);
+    edgeLayer.eachLayer(styleEdgeForTrace);
+    updateReleaseLegend(traceCtx.drawdown);
 
     renderPanel(selected,anc,immediate,data);
   }catch(err){
@@ -1416,7 +1542,7 @@ function renderPanel(X,anc,immediate,data){
 
   html+=`<div class="selectionbar">
     <div class="who">Downstream target<br><b>Reservoir #${X}</b></div>
-    <div class="count">${anc.length} upstream</div>
+    <div class="count">${anc.length===0?"headwater":anc.length+" upstream"}</div>
   </div>`;
 
   if(gdw!=null || country){
@@ -1429,6 +1555,20 @@ function renderPanel(X,anc,immediate,data){
 
   if(!data){
     html+=`<p class="error">Upstream data could not be loaded for this reservoir.</p>`;
+    document.getElementById("content").innerHTML=html;
+    bindPanelEvents(X);
+    applyPanelWidth();
+    initPanelDrag();
+    return;
+  }
+
+  // Headwater: nothing upstream, so there is no upstream comparison to make.
+  if(anc.length===0){
+    html+=`<div class="headwaternote">
+      <div class="hw-icon">⛰️</div>
+      <div class="hw-title">This is the most upstream reservoir</div>
+      <div class="hw-body">Reservoir #${X} has no reservoirs above it on the network, so there are no upstream storage changes to trace. Pick a reservoir further downstream to compare its upstream sources.</div>
+    </div>`;
     document.getElementById("content").innerHTML=html;
     bindPanelEvents(X);
     applyPanelWidth();
