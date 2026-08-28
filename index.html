@@ -819,8 +819,8 @@ function loadImpactFrame(){
 // ─────────────────────────────────────────────────
 var map = L.map('map',{zoomControl:true,preferCanvas:true});
 var BASEMAPS = [
-  {id:'dark',      label:'Dark',      color:'#1a2130', url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',       attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
-  {id:'light',     label:'Light',     color:'#f0ede8', url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',      attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
+  {id:'dark',      label:'Dark',      color:'#1a2130', url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2f4d_1_dde243a5ffa856220e9d089f',       attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
+  {id:'light',     label:'Light',     color:'#f0ede8', url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2f4d_1_dde243a5ffa856220e9d089f',      attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
   {id:'satellite', label:'Satellite', color:'#1a2f1a', url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr:'&copy; Esri', opts:{maxZoom:19}},
   {id:'topo',      label:'Topo',      color:'#cdd8b3', url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                    attr:'&copy; OpenTopoMap',                         opts:{maxZoom:17}},
   {id:'osm',       label:'Street',    color:'#b8d0e8', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',                      attr:'&copy; OpenStreetMap',                       opts:{maxZoom:19}},

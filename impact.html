@@ -518,7 +518,7 @@ let familyById = {}, familyMembers = {}, familyShapeById = {};
 
 function initMap(){
   map = L.map("map",{zoomControl:true}).setView([26,90],5);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2f4d_1_dde243a5ffa856220e9d089f",{
     attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19
   }).addTo(map);
 
