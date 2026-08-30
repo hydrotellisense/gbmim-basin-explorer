@@ -92,11 +92,13 @@
   .qcard{background:#fff;border:1px solid var(--question-border);border-radius:12px;
     padding:14px 14px 13px;margin:0 0 10px;cursor:default;position:relative;overflow:hidden}
   .qcard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--reservoir)}
+  .qcard.impactcard:before{background:var(--selected)}
   .qcard.drawcard:before{background:var(--draw)}
   .qcard.has-source{cursor:pointer}
   .qcard.has-source:hover{border-color:#b9c8d7;box-shadow:0 3px 12px rgba(26,49,72,.08)}
   .qnum{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:750}
   .qtitle{font-size:13px;font-weight:700;line-height:1.35;color:var(--text);margin-top:3px}
+  .qsub{font-size:11px;color:var(--muted);line-height:1.4;margin-top:4px}
   .answerrow{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:10px}
   .qanswer{font-size:28px;font-weight:750;line-height:.95;font-variant-numeric:tabular-nums;color:var(--selected)}
   .qanswer.draw{color:var(--draw)}
@@ -111,6 +113,40 @@
     border-radius:14px;padding:4px 7px;white-space:nowrap}
   .fact b{color:var(--text)}
   .qhint{font-size:10px;color:var(--trace);font-weight:650;margin-top:8px}
+
+  /* Q1 impact: highlighted #1 then a ranked list of names */
+  .impacttop{margin-top:11px;padding:11px 12px;border:1px solid var(--question-border);
+    border-radius:10px;background:linear-gradient(180deg,#f2f7fc,#ffffff);cursor:pointer;
+    transition:border-color .12s,box-shadow .12s}
+  .impacttop:hover{border-color:#b9c8d7;box-shadow:0 3px 12px rgba(26,49,72,.08)}
+  .impacttop-rank{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--trace);
+    font-weight:800;margin-bottom:5px}
+  .impacttop-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .impacttop-id{font-size:26px;font-weight:750;line-height:.95;color:var(--selected);
+    font-variant-numeric:tabular-nums}
+  .impacttop-pct{font-size:20px;font-weight:750;color:var(--selected);font-variant-numeric:tabular-nums;
+    text-align:right;line-height:1.05}
+  .impacttop-pct span{display:block;font-size:9.5px;font-weight:500;color:var(--muted);margin-top:2px}
+  .impacttop-hops{font-size:10.5px;color:var(--muted);margin-top:6px}
+  .impacttop-foot{display:flex;align-items:center;gap:9px;margin-top:7px;flex-wrap:wrap}
+  .impacttop-foot .impacttop-hops{margin-top:0}
+  .sharechip{font-size:10px;font-weight:750;color:var(--trace);background:var(--trace-soft);
+    border:1px solid #f0dfae;border-radius:11px;padding:2px 8px;white-space:nowrap}
+  .impactrest{margin-top:11px}
+  .impactrest-label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+    font-weight:750;margin-bottom:7px;line-height:1.4}
+  .hopnames{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .hopname{font-size:12px;font-weight:700;color:var(--selected);background:var(--bg);
+    border:1px solid var(--question-border);border-radius:13px;padding:3px 5px 3px 9px;cursor:pointer;
+    font-variant-numeric:tabular-nums;transition:background .12s,border-color .12s,color .12s;
+    display:inline-flex;align-items:center;gap:5px}
+  .hopname .share{font-size:10px;font-weight:700;color:var(--muted);background:#fff;
+    border:1px solid var(--question-border);border-radius:9px;padding:1px 5px}
+  .hopname:hover{background:var(--selected);border-color:var(--selected);color:#fff}
+  .hopname:hover .share{color:var(--selected);background:#fff;border-color:#fff}
+  .hopmore{font-size:11px;color:var(--muted);font-weight:600;padding:3px 4px;cursor:pointer}
+  .hopmore:hover{color:var(--trace);text-decoration:underline}
+
   .guardrail{font-size:11px;line-height:1.45;color:#775f20;background:#fff8e8;border:1px solid #f0dfae;
     border-radius:9px;padding:8px 10px;margin:0 0 12px}
   .contextbox{font-size:11.5px;line-height:1.5;color:var(--muted);background:#eef5fa;
@@ -436,12 +472,14 @@
     <div class="helpSection">Reading the panel</div>
 
     <div class="helpCard">
-      <h2>The two questions</h2>
+      <h2>The three questions</h2>
+      <h3>Which upstream reservoirs have the greatest impact?</h3>
+      <p>The upstream reservoirs whose storage change is the largest share of the target's seasonal runoff, listed by how many hops upstream they sit. Greatest impact is named first in each hop level. Click a name to re-target it, or hover to light its route to the target.</p>
       <h3>Which upstream reservoir changed its stored water the most?</h3>
-      <p>The upstream reservoir whose stored water moved the most that season — whether it filled up or drew down.</p>
+      <p>The single upstream reservoir whose stored water moved the most that season — whether it filled up or drew down.</p>
       <h3>Which upstream reservoir released the most stored water?</h3>
       <p>The upstream reservoir that lost the most stored water — the likeliest source of extra water reaching the downstream reservoir.</p>
-      <div class="helpWarning">A release here means a <b>drop in storage</b>, not a measured gate opening. The dashboard shows <b>potential</b> effects, not confirmed releases.</div>
+      <div class="helpWarning">A release here means a <b>drop in storage</b>, not a measured gate opening. The dashboard shows <b>potential</b> effects, not confirmed releases. Impact percentages are per reservoir against the target's runoff and are <b>not additive</b> across the nested upstream watersheds.</div>
     </div>
 
     <div class="helpCard">
@@ -452,7 +490,7 @@
       </div>
       <div class="helpTerm">
         <div class="name">% of the season's runoff</div>
-        <div class="desc">That storage change compared with the total runoff of the target reservoir's watershed for the season. A bigger share means a bigger effect.</div>
+        <div class="desc">That storage change compared with the total runoff of the target reservoir's watershed for the season — the source-to-target impact. A bigger share means a bigger effect.</div>
       </div>
       <div class="helpTerm">
         <div class="name">reservoirs downstream</div>
@@ -551,10 +589,10 @@ function updateReleaseLegend(dd){
 
   const stops=RELEASE_RAMP.join(",");
   el.innerHTML=
-    `<b>Water released by upstream reservoir</b><br>`+
+    `<b>Impact of upstream reservoir</b><br>`+
     `<div class="rl-bar" style="background:linear-gradient(90deg,${stops})"></div>`+
-    `<div class="rl-scale"><span>least<br>released</span><span>most<br>released</span></div>`+
-    `<div class="rl-note">Darker edge = its upstream reservoir released more this season (max ${fmt(dd.max,0)} million m³)</div>`;
+    `<div class="rl-scale"><span>least<br>impact</span><span>most<br>impact</span></div>`+
+    `<div class="rl-note">Darker edge = its upstream reservoir has more impact on the target this season (max ${fmt(dd.max,1)}% of runoff)</div>`;
   el.style.display="block";
 }
 
@@ -792,40 +830,38 @@ function releaseColor(t){
   return rgb2css([lerp(a[0],b[0],f),lerp(a[1],b[1],f),lerp(a[2],b[2],f)]);
 }
 
-/* Release (drawdown) volume, in million m³, per upstream source for the
-   current window + season. Only storage decreases count as a release. */
-/* Release (drawdown) volume, in million m³, per upstream source for the
-   current window + season. Only storage decreases count as a release.
-   We also assign each *releasing* reservoir a rank-based position on the
-   colour ramp (0 = most released → 1 = least released) so the gradient
-   steps evenly through the reservoirs instead of collapsing when one
-   reservoir dominates the raw magnitudes. */
-/* Release (drawdown) volume, in million m³, per upstream source for the
-   current window + season. Only storage decreases count as a release.
-   Each releasing reservoir is quantised into one of BINS discrete colour
-   bins by its release magnitude, so the gradient steps through 10 shades. */
+/* Source-to-target impact (formula 14, |pair_impact_pct_of_target_runoff|)
+   per upstream source for the current window + season. Reservoirs are binned
+   by their RANK position (quantile / distribution-based), not by raw value,
+   so the 10 colour steps spread evenly even when one reservoir dominates. */
 const RELEASE_BINS=10;
-function buildDrawdownMap(data,win,season){
+function buildImpactMap(data,win,season){
   const s=windowSeason(data,win[1],win[2],season);
   const map={}; let max=0;
-  const releasers=[];
+  const items=[];
   for(const src of (s?.sources||[])){
     const id=String(src.gww_id);
-    const ch=num(src.change_mcm);
-    const rel=(ch!=null && ch<0) ? -ch : 0;   // release = drawdown magnitude
-    map[id]=rel;
-    if(rel>max) max=rel;
-    if(rel>0) releasers.push({id,rel});
+    const ip=num(src.impact_pct);
+    const val=(ip!=null) ? Math.abs(ip) : 0;   // impact magnitude, % of target runoff
+    map[id]=val;
+    if(val>max) max=val;
+    if(val>0) items.push({id,val});
   }
 
-  // Assign each releaser to one of RELEASE_BINS bins by magnitude,
-  // then map the bin to a t on the ramp (bin 0 = lightest, last = darkest).
+  // Distribution-based bins: sort by impact, then split into RELEASE_BINS
+  // groups by position so each shade holds a roughly equal share of reservoirs.
+  // Equal values share a bin (stable against ties).
+  items.sort((a,b)=>a.val-b.val);   // ascending: lightest → darkest
+  const n=items.length;
   const bin={};
-  for(const r of releasers){
-    let b = max>0 ? Math.floor((r.rel/max)*RELEASE_BINS) : 0;
-    if(b>=RELEASE_BINS) b=RELEASE_BINS-1;      // top value lands in last bin
-    bin[r.id]=b;
-  }
+  let lastVal=null, lastBin=0;
+  items.forEach((r,i)=>{
+    let b = n<=1 ? RELEASE_BINS-1 : Math.floor((i/(n-1))*(RELEASE_BINS-1)+1e-9);
+    if(b>RELEASE_BINS-1) b=RELEASE_BINS-1;
+    if(lastVal!=null && r.val===lastVal) b=lastBin;   // ties -> same shade
+    bin[r.id]=b; lastVal=r.val; lastBin=b;
+  });
+
   // t per bin: lightest bin still clearly tinted (0.12) → darkest (1)
   function binT(b){ return RELEASE_BINS<=1 ? 1 : 0.12 + 0.88*(b/(RELEASE_BINS-1)); }
 
@@ -930,17 +966,17 @@ function styleEdgeForTrace(l){
     setEdgeStyle(l,"dim");
     return;
   }
-  // On-route edge: colour by the release (drawdown) of its upstream reservoir,
-  // using its rank among releasers so each step is visually distinct.
+  // On-route edge: colour by the impact (formula 14) of its upstream reservoir,
+  // using its bin so each step is visually distinct.
   const dd=traceCtx.drawdown;
   if(dd && dd.max>0){
     const from=String(l.feature.properties.from_id);
-    const rel=dd.map[from];
-    if(rel!=null){
-      if(rel>0 && dd.rank[from]!=null){
+    const val=dd.map[from];
+    if(val!=null){
+      if(val>0 && dd.rank[from]!=null){
         setEdgeStyle(l,"gradient",releaseColor(dd.rank[from]));
       }else{
-        // no release this season (reservoir filled or was flat) → palest
+        // no impact value this season → palest
         setEdgeStyle(l,"gradient",releaseColor(0));
       }
       return;
@@ -986,9 +1022,9 @@ async function select(X){
       if(activeWindow==null) activeWindow=WINDOWS[WINDOWS.length-1][0];
     }
 
-    // Colour the trace edges by each upstream reservoir's release for the
-    // current period + season.
-    traceCtx.drawdown=buildDrawdownMap(data,activeWin(),activeSeason);
+    // Colour the trace edges by each upstream reservoir's impact on the target
+    // (formula 14) for the current period + season.
+    traceCtx.drawdown=buildImpactMap(data,activeWin(),activeSeason);
     edgeLayer.eachLayer(styleEdgeForTrace);
     updateReleaseLegend(traceCtx.drawdown);
 
@@ -1036,7 +1072,7 @@ function hoverReservoir(id,on){
 }
 
 /* Highlight the FULL route from an upstream source down to the current target,
-   i.e. every edge along source -> ... -> selected. Used by the Q1/Q2 cards. */
+   i.e. every edge along source -> ... -> selected. Used by the question cards. */
 function pathNodeSet(sourceId){
   sourceId=String(sourceId);
   const target=String(selected);
@@ -1369,18 +1405,80 @@ function seasonLabel(key){
   return s?s[1]:key;
 }
 
+/* How many names to show in the Q1 "rest" list before collapsing to "+N more". */
+const Q1_REST_CAP=10;
+
 function renderKeyQuestions(data,win,season){
   const s=windowSeason(data,win[1],win[2],season);
   const sources=(s?.sources||[]).filter(r=>num(r.change_mcm)!=null);
 
+  let h=`<div class="sectiontitle">Upstream in ${win[0]} · ${seasonLabel(season)}</div><div class="keyquestions">`;
+
+  /* ---- Question 1: which upstream reservoirs impact the target ----
+     Ranked by source-to-target impact (formula 14). The single highest-impact
+     reservoir is highlighted; each reservoir also carries its % share of the
+     total upstream storage movement (|ΔS_U| / Σ|ΔS_i|), which sums to 100%
+     across all upstream reservoirs. */
+  const impactSources=sources
+    .filter(r=>num(r.impact_pct)!=null)
+    .sort((a,b)=>Math.abs(num(b.impact_pct)??0)-Math.abs(num(a.impact_pct)??0));
+
+  // % share of total upstream storage movement (|ΔS|), summing to 100%.
+  const shareDenom=impactSources.reduce((sum,r)=>sum+Math.abs(num(r.change_mcm)??0),0);
+  const shareOf=r=>shareDenom>0 ? Math.abs(num(r.change_mcm)??0)/shareDenom*100 : 0;
+
+  if(impactSources.length){
+    const top=impactSources[0];
+    const topId=String(top.gww_id);
+    const topPct=Math.abs(num(top.impact_pct)??0);
+    const topShare=shareOf(top);
+    const topHops=num(top.hops);
+    const rest=impactSources.slice(1);
+
+    let q1=`<div class="qcard impactcard">
+      <div class="qnum">Question 1</div>
+      <div class="qtitle">Which upstream reservoirs have the greatest impact?</div>
+
+      <div class="impacttop" data-source-id="${topId}">
+        <div class="impacttop-rank">Greatest</div>
+        <div class="impacttop-row">
+          <div class="impacttop-id">#${topId}</div>
+          <div class="impacttop-pct">${fmt(topPct,1)}%<span>of the target's seasonal runoff</span></div>
+        </div>
+        <div class="impacttop-foot">
+          <span class="sharechip">${fmt(topShare,1)}% of total storage change</span>
+          ${topHops!=null?`<span class="impacttop-hops">${topHops} hop${topHops===1?"":"s"} upstream</span>`:""}
+        </div>
+      </div>`;
+
+    if(rest.length){
+      const shown=rest.slice(0,Q1_REST_CAP);
+      const extra=rest.length-shown.length;
+      let names=shown.map(r=>
+        `<span class="hopname" data-source-id="${String(r.gww_id)}">#${String(r.gww_id)}<span class="share">${fmt(shareOf(r),1)}%</span></span>`
+      ).join("");
+      if(extra>0)
+        names+=`<span class="hopmore" data-q1rest="1">+${extra} more</span>`;
+
+      q1+=`<div class="impactrest">
+        <div class="impactrest-label">Then, most to least impact · % of total storage change</div>
+        <div class="hopnames">${names}</div>
+      </div>`;
+    }
+
+    q1+=`</div>`;
+    h+=q1;
+  }else{
+    h+=`<div class="qcard impactcard">
+      <div class="qnum">Question 1</div>
+      <div class="qtitle">Which upstream reservoirs have the greatest impact?</div>
+      <div class="plainresult muted">No upstream reservoir has impact data for this period and season.</div>
+    </div>`;
+  }
+
+  /* ---- Question 2: biggest storage change (single reservoir + value) ---- */
   const strongest=[...sources].sort((a,b)=>
     Math.abs(num(b.change_mcm)??0)-Math.abs(num(a.change_mcm)??0))[0] || null;
-
-  const strongestDecrease=[...sources]
-    .filter(r=>num(r.change_mcm)<0)
-    .sort((a,b)=>Math.abs(num(b.change_mcm)??0)-Math.abs(num(a.change_mcm)??0))[0] || null;
-
-  let h=`<div class="sectiontitle">Upstream in ${win[0]} · ${seasonLabel(season)}</div><div class="keyquestions">`;
 
   if(strongest){
     const id=String(strongest.gww_id);
@@ -1390,8 +1488,8 @@ function renderKeyQuestions(data,win,season){
     const up=ch>0;
 
     h+=`<div class="qcard has-source" data-source-id="${id}">
-      <div class="qnum">Question 1</div>
-      <div class="qtitle">Which upstream reservoir changed its stored water the most this season?</div>
+      <div class="qnum">Question 2</div>
+      <div class="qtitle">Which upstream reservoir changed its stored water the most?</div>
       <div class="answerrow">
         <div class="qanswer">#${id}</div>
         <div class="answerstate ${up?"fill":"draw"}">${up?"filled up":"drew down"}</div>
@@ -1405,12 +1503,17 @@ function renderKeyQuestions(data,win,season){
     </div>`;
   }else{
     h+=`<div class="qcard">
-      <div class="qnum">Question 1</div>
-      <div class="qtitle">Which upstream reservoir changed its stored water the most this season?</div>
+      <div class="qnum">Question 2</div>
+      <div class="qtitle">Which upstream reservoir changed its stored water the most?</div>
       <div class="answerrow"><div class="qanswer">—</div></div>
       <div class="plainresult muted">No upstream reservoir has data for this period and season.</div>
     </div>`;
   }
+
+  /* ---- Question 3: biggest release (single reservoir + value) ---- */
+  const strongestDecrease=[...sources]
+    .filter(r=>num(r.change_mcm)<0)
+    .sort((a,b)=>Math.abs(num(b.change_mcm)??0)-Math.abs(num(a.change_mcm)??0))[0] || null;
 
   if(strongestDecrease){
     const id=String(strongestDecrease.gww_id);
@@ -1419,8 +1522,8 @@ function renderKeyQuestions(data,win,season){
     const hops=num(strongestDecrease.hops);
 
     h+=`<div class="qcard drawcard has-source" data-source-id="${id}">
-      <div class="qnum">Question 2</div>
-      <div class="qtitle">Which upstream reservoir released the most stored water this season?</div>
+      <div class="qnum">Question 3</div>
+      <div class="qtitle">Which upstream reservoir released the most stored water?</div>
       <div class="answerrow">
         <div class="qanswer draw">#${id}</div>
         <div class="answerstate draw">largest release</div>
@@ -1434,8 +1537,8 @@ function renderKeyQuestions(data,win,season){
     </div>`;
   }else{
     h+=`<div class="qcard drawcard">
-      <div class="qnum">Question 2</div>
-      <div class="qtitle">Which upstream reservoir released the most stored water this season?</div>
+      <div class="qnum">Question 3</div>
+      <div class="qtitle">Which upstream reservoir released the most stored water?</div>
       <div class="answerrow"><div class="qanswer draw">—</div></div>
       <div class="plainresult muted">No upstream reservoir drew its storage down this period.</div>
     </div>`;
@@ -1694,21 +1797,72 @@ function bindPanelEvents(X){
   const wp=document.getElementById("winPick");
   if(wp) wp.addEventListener("change",()=>{ activeWindow=wp.value; select(X); });
 
+  // Q2 / Q3 single-reservoir cards: click to re-target, hover to light the route.
   c.querySelectorAll(".qcard[data-source-id]").forEach(card=>{
     card.addEventListener("click",()=>select(card.dataset.sourceId));
     card.addEventListener("mouseenter",()=>hoverPath(card.dataset.sourceId,true));
     card.addEventListener("mouseleave",()=>hoverPath(card.dataset.sourceId,false));
   });
 
+  // Q1 highlighted top reservoir: click to re-target, hover to light its route.
+  c.querySelectorAll(".impacttop[data-source-id]").forEach(top=>{
+    top.addEventListener("click",()=>select(top.dataset.sourceId));
+    top.addEventListener("mouseenter",()=>hoverPath(top.dataset.sourceId,true));
+    top.addEventListener("mouseleave",()=>hoverPath(top.dataset.sourceId,false));
+  });
+
+  // Q1 ranked names: click to re-target, hover to light that reservoir's route.
+  c.querySelectorAll(".hopname[data-source-id]").forEach(chip=>{
+    chip.addEventListener("click",()=>select(chip.dataset.sourceId));
+    chip.addEventListener("mouseenter",()=>hoverPath(chip.dataset.sourceId,true));
+    chip.addEventListener("mouseleave",()=>hoverPath(chip.dataset.sourceId,false));
+  });
+
+  // Q1 "+N more": reveal the full ranked rest list in place.
+  c.querySelectorAll(".hopmore[data-q1rest]").forEach(more=>{
+    more.addEventListener("click",()=>expandQ1Rest());
+  });
+
   const reset=document.getElementById("reset");
   if(reset) reset.addEventListener("click",resetHighlight);
+}
+
+/* Reveal every reservoir in the Q1 ranked "rest" list (drops the "+N more" cap). */
+function expandQ1Rest(){
+  const data=targetCache[selected];
+  if(!data) return;
+  const win=activeWin();
+  const s=windowSeason(data,win[1],win[2],activeSeason);
+  const ranked=(s?.sources||[])
+    .filter(r=>num(r.change_mcm)!=null && num(r.impact_pct)!=null)
+    .sort((a,b)=>Math.abs(num(b.impact_pct)??0)-Math.abs(num(a.impact_pct)??0));
+
+  const denom=ranked.reduce((sum,r)=>sum+Math.abs(num(r.change_mcm)??0),0);
+  const shareOf=r=>denom>0 ? Math.abs(num(r.change_mcm)??0)/denom*100 : 0;
+
+  const rest=ranked.slice(1); // drop the highlighted #1
+
+  const moreEl=document.querySelector('.hopmore[data-q1rest]');
+  const namesEl=moreEl?.closest(".impactrest")?.querySelector(".hopnames");
+  if(!namesEl) return;
+
+  namesEl.innerHTML=rest.map(r=>
+    `<span class="hopname" data-source-id="${String(r.gww_id)}">#${String(r.gww_id)}<span class="share">${fmt(shareOf(r),1)}%</span></span>`
+  ).join("");
+
+  // rebind the newly revealed chips
+  namesEl.querySelectorAll(".hopname[data-source-id]").forEach(chip=>{
+    chip.addEventListener("click",()=>select(chip.dataset.sourceId));
+    chip.addEventListener("mouseenter",()=>hoverPath(chip.dataset.sourceId,true));
+    chip.addEventListener("mouseleave",()=>hoverPath(chip.dataset.sourceId,false));
+  });
 }
 
 function renderIdle(){
   document.getElementById("content").innerHTML=
     `<p class="hint"><b>Pick a reservoir on the map.</b><br><br>
-    You'll see the two upstream reservoirs that matter most for the chosen period and season:<br><br>
-    which one <b>changed its stored water the most</b>, and which one <b>released the most</b>.<br><br>
+    You'll see which upstream reservoirs have the <b>greatest impact</b> on the chosen target for that period and season,<br><br>
+    plus which one <b>changed its stored water the most</b>, and which one <b>released the most</b>.<br><br>
     See the <b>How to read</b> tab above for a full guide.</p>`;
 }
 
