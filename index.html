@@ -131,6 +131,7 @@
   .page-overlay.visible { display:block; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
   .page-overlay h2 { font-family:'Bitter',serif; font-size:28px; font-weight:700; color:var(--text); margin-bottom:6px; }
+  .page-overlay h3.section-head { font-family:'Bitter',serif; font-size:19px; font-weight:700; color:var(--text); margin:40px 0 6px; }
   .page-overlay .lead { font-size:14px; color:var(--muted); margin-bottom:32px; line-height:1.7; max-width:680px; }
   .page-overlay .divider { width:48px; height:3px; background:var(--accent); border-radius:2px; margin-bottom:28px; }
   .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; max-width:900px; margin-bottom:40px; }
@@ -144,11 +145,52 @@
   .contributor-role { font-size:11px; color:var(--muted); margin-top:2px; }
   .close-page { position:fixed; top:calc(var(--nav-h) + var(--subnav-h) + 16px); right:24px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--muted); padding:6px 14px; font-size:12px; cursor:pointer; z-index:900; }
   .close-page:hover { color:var(--text); }
-  /* Impact overlay: fill the whole area below the nav, no padding, embed the standalone page. */
+  /* Impact overlay: fill the whole area below the nav + sub-nav, no padding, embed the standalone page. */
   .page-overlay-flush { padding:0 !important; overflow:hidden; }
-  #page-impact { inset:var(--nav-h) 0 0 0; }  /* impact has its own sub-nav inside the iframe */
+  #page-impact { inset:calc(var(--nav-h) + var(--subnav-h)) 0 0 0; }
   #impact-frame { width:100%; height:100%; border:0; display:block; background:var(--bg); }
   @media (max-width:700px) { .page-overlay-flush { padding:0 !important; } }
+
+  /* ── Contact page ── */
+  .contact-wrap { max-width:760px; }
+  .contact-cta { display:flex; flex-wrap:wrap; gap:14px; margin:26px 0 40px; }
+  .contact-btn { display:inline-flex; align-items:center; gap:10px; text-decoration:none; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 22px; transition:border-color .2s,transform .2s,box-shadow .2s; }
+  .contact-btn:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 22px var(--shadow-soft); }
+  .contact-btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent; }
+  .contact-btn .cb-icon { font-size:22px; line-height:1; }
+  .contact-btn .cb-text { display:flex; flex-direction:column; gap:2px; }
+  .contact-btn .cb-label { font-family:'Bitter',serif; font-size:14px; font-weight:700; color:var(--text); }
+  .contact-btn .cb-sub { font-size:11px; color:var(--muted); }
+  .contact-btn.primary .cb-label, .contact-btn.primary .cb-sub { color:#fff; }
+  .contact-btn.primary .cb-sub { opacity:.85; }
+  .contact-rows { display:flex; flex-direction:column; gap:12px; max-width:600px; margin-bottom:36px; }
+  .contact-row { display:flex; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:14px 18px; }
+  .contact-row .cr-icon { width:34px; height:34px; border-radius:8px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .contact-row .cr-body { min-width:0; }
+  .contact-row .cr-label { font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:2px; }
+  .contact-row .cr-val { font-size:13px; color:var(--text); word-break:break-word; }
+  .contact-row .cr-val a { color:var(--accent); text-decoration:none; }
+  .contact-row .cr-val a:hover { text-decoration:underline; }
+  /* contact form */
+  .contact-form { max-width:600px; display:flex; flex-direction:column; gap:14px; margin-bottom:34px; }
+  .cf-field { display:flex; flex-direction:column; gap:6px; }
+  .cf-field label { font-family:'Bitter',serif; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+  .cf-field label .req { color:var(--accent3); margin-left:2px; }
+  .cf-field input, .cf-field textarea { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:11px 13px; font-family:'Inter',sans-serif; font-size:13px; color:var(--text); outline:none; transition:border-color .18s,box-shadow .18s; }
+  .cf-field input::placeholder, .cf-field textarea::placeholder { color:var(--muted); opacity:.7; }
+  .cf-field input:focus, .cf-field textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--shadow-soft); }
+  .cf-field textarea { resize:vertical; min-height:120px; line-height:1.5; }
+  .cf-actions { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .cf-send { display:inline-flex; align-items:center; gap:8px; border:none; cursor:pointer; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; font-family:'Bitter',serif; font-size:13px; font-weight:700; letter-spacing:.03em; padding:12px 24px; border-radius:10px; transition:transform .18s,box-shadow .18s,opacity .18s; }
+  .cf-send:hover { transform:translateY(-2px); box-shadow:0 8px 22px var(--shadow-soft); }
+  .cf-note { font-size:11px; color:var(--muted); line-height:1.5; }
+  .cf-error { color:var(--accent3); font-size:12px; font-weight:600; display:none; }
+  .cf-error.show { display:block; }
+  /* bottom route link */
+  .contact-bottom { border-top:1px solid var(--border); padding-top:22px; margin-top:8px; display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; }
+  .contact-bottom .cb-hint { font-size:12px; color:var(--muted); }
+  .contact-bottom a.mainlink { display:inline-flex; align-items:center; gap:8px; font-family:'Bitter',serif; font-size:14px; font-weight:700; color:var(--accent); text-decoration:none; border:1px solid var(--accent); border-radius:10px; padding:11px 22px; transition:background .18s,color .18s,transform .18s; }
+  .contact-bottom a.mainlink:hover { background:var(--accent); color:#fff; transform:translateY(-2px); }
 
   /* ── How To Use ── */
   .howto-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; max-width:1800px; margin-bottom:32px; }
@@ -277,6 +319,7 @@
   .st-title { font-family:'Bitter',serif; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent4); margin-bottom:6px; }
   .st-metric { background:var(--bg); border:1px solid var(--border); border-radius:5px; color:var(--muted); font-family:'Bitter',serif; font-size:9px; font-weight:600; letter-spacing:.04em; padding:2px 6px; cursor:pointer; outline:none; max-width:130px; }
   .st-metric:hover,.st-metric:focus { color:var(--text); border-color:var(--muted); }
+  .st-label { font-family:'Bitter',serif; font-size:9px; font-weight:600; letter-spacing:.04em; color:var(--muted); padding:2px 2px; }
 
   /* ── Time series MODAL ── */
   #ts-modal { position:fixed; inset:0; background:rgba(11,15,26,.75); backdrop-filter:blur(4px); z-index:2000; display:none; align-items:center; justify-content:center; padding:24px; animation:fadeIn .18s ease; }
@@ -294,6 +337,7 @@
   .ts-modal-controls { display:flex; align-items:center; gap:8px; }
   .ts-modal-metric { background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:'Bitter',serif; font-size:11px; font-weight:600; padding:4px 8px; cursor:pointer; outline:none; }
   .ts-modal-metric:hover { border-color:var(--muted); }
+  .ts-modal-label { background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-family:'Bitter',serif; font-size:11px; font-weight:600; padding:4px 10px; }
   .ts-modal-close { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--muted); padding:4px 10px; cursor:pointer; font-family:'Bitter',serif; font-size:12px; transition:color .15s,border-color .15s; }
   .ts-modal-close:hover { color:var(--accent3); border-color:var(--accent3); }
   .ts-modal-body { padding:18px 22px 22px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; min-height:0; }
@@ -376,16 +420,14 @@
 
 <!-- ═══════ NAV ═══════ -->
 <nav>
-  <span class="nav-title">GBMIM <span>Reservoir Map</span></span>
+  <span class="nav-title"><span>RIQSA</span> (River &amp; Reservoir Analysis)</span>
   <div class="nav-links">
     <button class="nav-link active" onclick="showPage('map')">Home</button>
     <button class="nav-link" onclick="showPage('impact')">Impact Tracing</button>
-    <button class="nav-link" onclick="showPage('home')">Summary</button>
-    <button class="nav-link" onclick="showPage('details')">Details</button>
-    <button class="nav-link" onclick="showPage('contributors')">Contributors</button>
+    <button class="nav-link" onclick="showPage('overview')">Overview</button>
+    <button class="nav-link" onclick="showPage('contact')">Contact</button>
   </div>
   <div class="nav-right">
-    <span class="nav-badge">River &amp; Reservoir Analysis</span>
     <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle light/dark theme">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -399,10 +441,10 @@
   <button class="subtab" id="subtab-howto" onclick="showPage('howto')">📖 How to read</button>
 </nav>
 
-<!-- ═══════ HOME ═══════ -->
-<div class="page-overlay" id="page-home">
+<!-- ═══════ OVERVIEW (merged Summary + Details) ═══════ -->
+<div class="page-overlay" id="page-overview">
   <button class="close-page" onclick="showPage('map')">✕ Close</button>
-  <h2>GBMIM Reservoir Map</h2>
+  <h2>GBMIM Reservoir Atlas</h2>
   <div class="divider"></div>
   <p class="lead">An interactive hydrological atlas of 772 reservoirs across South and Southeast Asia. Explore watershed boundaries, downstream river networks, runoff timeseries, and storage data.</p>
   <div class="card-grid">
@@ -411,6 +453,16 @@
     <div class="info-card-page"><div class="card-num">772</div><div class="card-label">Downstream Paths</div></div>
     <div class="info-card-page"><div class="card-num">10</div><div class="card-label">Countries</div></div>
   </div>
+
+  <h3 class="section-head">Dataset Details</h3>
+  <p class="lead">Reservoir locations from GRanD v1.3 supplemented with the GBMIM dataset covering Ganges–Brahmaputra–Meghna–Irrawaddy–Mekong systems. Watershed delineations use HydroSHEDS DEM at 15 arc-second resolution.</p>
+  <div class="card-grid">
+    <div class="info-card-page"><div class="card-num">15″</div><div class="card-label">DEM Resolution</div></div>
+    <div class="info-card-page"><div class="card-num">WGS84</div><div class="card-label">Coordinate System</div></div>
+    <div class="info-card-page"><div class="card-num">GRanD</div><div class="card-label">Primary Source</div></div>
+    <div class="info-card-page"><div class="card-num">v1.1</div><div class="card-label">Dataset Version</div></div>
+  </div>
+
   <p class="lead">New here? See the <a href="javascript:void(0)" onclick="showPage('howto')" style="color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent);">How to Use</a> page for a quick tour of every feature.</p>
 </div>
 
@@ -451,7 +503,7 @@
       <div class="howto-icon-row">
         <span class="ic-swatch-violet"></span><span class="howto-mini-tag violet">Storage</span>
       </div>
-      <div class="howto-body">Reservoirs with GWW storage data show a separate <b>Storage</b> card (violet border). Select a column from the dropdown to see monthly storage levels.</div>
+      <div class="howto-body">Reservoirs with GWW storage data show a separate <b>Storage</b> card (violet border) with monthly storage levels.</div>
     </div>
     <div class="howto-card">
       <div class="howto-step">Step 6</div>
@@ -486,38 +538,54 @@
   </div>
 </div>
 
-<!-- ═══════ DETAILS ═══════ -->
-<div class="page-overlay" id="page-details">
+<!-- ═══════ CONTACT ═══════ -->
+<div class="page-overlay" id="page-contact">
   <button class="close-page" onclick="showPage('map')">✕ Close</button>
-  <h2>Dataset Details</h2>
-  <div class="divider"></div>
-  <p class="lead">Reservoir locations from GRanD v1.3 supplemented with the GBMIM dataset covering Ganges–Brahmaputra–Meghna–Irrawaddy–Mekong systems. Watershed delineations use HydroSHEDS DEM at 15 arc-second resolution.</p>
-  <div class="card-grid">
-    <div class="info-card-page"><div class="card-num">15″</div><div class="card-label">DEM Resolution</div></div>
-    <div class="info-card-page"><div class="card-num">WGS84</div><div class="card-label">Coordinate System</div></div>
-    <div class="info-card-page"><div class="card-num">GRanD</div><div class="card-label">Primary Source</div></div>
-    <div class="info-card-page"><div class="card-num">v1.1</div><div class="card-label">Dataset Version</div></div>
-  </div>
-</div>
+  <!-- <div class="contact-wrap">
+    <h2>Contact &amp; About</h2>
+    <div class="divider"></div>
+    <p class="lead">The GBMIM Reservoir Atlas is part of the HydroTelliSense research program on reservoir regulation and river-network impacts across South and Southeast Asia. To learn more about the wider project, its methods, and the team, visit our main site.</p>
 
-<!-- ═══════ CONTRIBUTORS ═══════ -->
-<div class="page-overlay" id="page-contributors">
-  <button class="close-page" onclick="showPage('map')">✕ Close</button>
-  <h2>Contributors</h2>
-  <div class="divider"></div>
-  <p class="lead">Research team behind the GBMIM dataset.</p>
-  <div class="contributor-list">
-    <div class="contributor">
-      <div class="contributor-avatar">P</div>
-      <div><div class="contributor-name">Person 1</div><div class="contributor-role">Lead Researcher · Hydrology &amp; GIS</div></div>
+    <div class="contact-cta">
+      <a class="contact-btn primary" href="https://hydrotellisense.github.io/" target="_blank" rel="noopener">
+        <span class="cb-icon">🌐</span>
+        <span class="cb-text">
+          <span class="cb-label">Visit HydroTelliSense</span>
+          <span class="cb-sub">hydrotellisense.github.io — main project site</span>
+        </span>
+      </a>
+      <a class="contact-btn" href="javascript:void(0)" onclick="showPage('overview')">
+        <span class="cb-icon">📄</span>
+        <span class="cb-text">
+          <span class="cb-label">Atlas Overview</span>
+          <span class="cb-sub">Dataset scope, sources &amp; details</span>
+        </span>
+      </a>
+    </div> -->
+
+    <h3 class="section-head">Send us a message</h3>
+    <p class="lead" style="margin-bottom:18px;">Have a question, correction, or collaboration idea? Send us a message at either address below.</p>
+
+    <div class="contact-rows">
+      <div class="contact-row">
+        <span class="cr-icon">📧</span>
+        <div class="cr-body">
+          <div class="cr-label">Email</div>
+          <div class="cr-val">Protik Bose Pranto (<a href="mailto:ppranto@asu.edu">ppranto@asu.edu</a>)</div>
+        </div>
+      </div>
+      <div class="contact-row">
+        <span class="cr-icon">📧</span>
+        <div class="cr-body">
+          <div class="cr-label">Email</div>
+          <div class="cr-val">Nishan Biswas (<a href="mailto:nishan.wre.buet@gmail.com">nishan.wre.buet@gmail.com</a>)</div>
+        </div>
+      </div>
     </div>
-    <div class="contributor">
-      <div class="contributor-avatar">R</div>
-      <div><div class="contributor-name">Person 2</div><div class="contributor-role">Watershed Delineation &amp; Data Processing</div></div>
-    </div>
-    <div class="contributor">
-      <div class="contributor-avatar">I</div>
-      <div><div class="contributor-name">Institution</div><div class="contributor-role">Sponsoring Organization</div></div>
+
+    <div class="contact-bottom">
+      <span class="cb-hint">Learn more about the wider research program</span>
+      <a class="mainlink" href="https://hydrotellisense.github.io/" target="_blank" rel="noopener">🌐 Visit HydroTelliSense →</a>
     </div>
   </div>
 </div>
@@ -608,12 +676,12 @@
         <div class="ts-axis-x" id="ts-axis-x"><span>–</span><span>–</span></div>
       </div>
 
-      <!-- Storage time series -->
+      <!-- Storage time series (single series — no metric dropdown needed) -->
       <div id="st-card">
         <div class="ts-head">
           <span class="st-title">Storage</span>
           <span class="ts-head-right">
-            <select class="st-metric" id="st-metric" onchange="renderStorageSeries()"></select>
+            <span class="st-label" id="st-label">–</span>
             <button class="ts-expand" onclick="openTsModal('storage')" title="Expand chart">⛶ Expand</button>
           </span>
         </div>
@@ -699,6 +767,7 @@
       </div>
       <div class="ts-modal-controls">
         <select class="ts-modal-metric" id="ts-modal-metric" onchange="syncMetricFromModal()"></select>
+        <span class="ts-modal-label" id="ts-modal-label" style="display:none;"></span>
         <button class="ts-modal-close" onclick="closeTimeSeriesModal()">✕ Close</button>
       </div>
     </div>
@@ -781,14 +850,16 @@ function toggleTheme(){ applyTheme(getCurrentTheme()==='light'?'dark':'light'); 
 //  Nav
 // ─────────────────────────────────────────────────
 function showPage(name) {
-  ['home','howto','details','contributors','impact'].forEach(function(p){
+  ['overview','howto','contact','impact'].forEach(function(p){
     document.getElementById('page-'+p).classList.toggle('visible',p===name);
   });
   document.querySelectorAll('.nav-link').forEach(function(el){
     var label=el.textContent.toLowerCase().trim();
     el.classList.toggle('active',
       label===name ||
-      (name==='map'&&label==='map') ||
+      (name==='map'&&label==='home') ||
+      (name==='overview'&&label==='overview') ||
+      (name==='contact'&&label==='contact') ||
       (name==='impact'&&label==='impact tracing'));
   });
   // Sub-nav highlight: How-to-read active only on the howto page; Map stays the default otherwise.
@@ -796,21 +867,25 @@ function showPage(name) {
   var stHow=document.getElementById('subtab-howto');
   if(stHow) stHow.classList.toggle('active',name==='howto');
   if(stMap) stMap.classList.toggle('active',name!=='howto');
-  // The impact page has its own sub-nav inside the iframe — hide this one there.
+  // Sub-nav bar stays visible on every page — map, how-to, impact, overview,
+  // and contact — so the secondary header is consistent throughout.
   var sn=document.getElementById('subnav');
-  if(sn) sn.style.display = (name==='impact') ? 'none' : 'flex';
+  if(sn) sn.style.display = 'flex';
   if (name==='impact') loadImpactFrame();
   if (name==='map') setTimeout(function(){ map.invalidateSize(); },50);
 }
 
 // Load the standalone impact page into the overlay iframe the first time it's
 // opened, and keep its theme in sync. impact.html stays a separate file.
+// The main sub-nav bar (Map / How to read) stays visible above the iframe so
+// both pages share the same header. We pass hidesubnav=1 so impact.html can
+// suppress its own internal sub-nav and avoid a doubled bar.
 function loadImpactFrame(){
   var f=document.getElementById('impact-frame');
   if(!f) return;
   var theme=getCurrentTheme();
   if(!f.getAttribute('src')){
-    f.src='impact.html?theme='+encodeURIComponent(theme);
+    f.src='impact.html?theme='+encodeURIComponent(theme)+'&hidesubnav=1';
   }
 }
 
@@ -822,9 +897,9 @@ var BASEMAPS = [
   {id:'dark',      label:'Dark',      color:'#1a2130', url:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2f4d_1_dde243a5ffa856220e9d089f',       attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
   {id:'light',     label:'Light',     color:'#f0ede8', url:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2f4d_1_dde243a5ffa856220e9d089f',      attr:'&copy; OpenStreetMap &copy; CARTO',          opts:{subdomains:'abcd',maxZoom:19}},
   {id:'satellite', label:'Satellite', color:'#1a2f1a', url:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr:'&copy; Esri', opts:{maxZoom:19}},
-  {id:'topo',      label:'Topo',      color:'#cdd8b3', url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                    attr:'&copy; OpenTopoMap',                         opts:{maxZoom:17}},
+  {id:'topo',      label:'Topo',      color:'#cdd8b3', url:'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',                    attr:'&copy; OpenTopoMap',                         opts:{subdomains:'abc',maxZoom:17}},
   {id:'osm',       label:'Street',    color:'#b8d0e8', url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',                      attr:'&copy; OpenStreetMap',                       opts:{maxZoom:19}},
-  {id:'terrain',   label:'Terrain',   color:'#d4c5a9', url:'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png', attr:'&copy; Stadia &copy; Stamen &copy; OSM',     opts:{maxZoom:18}}
+  {id:'terrain', label:'Terrain', color:'#d4c5a9', url:'https://tiles.stadiamaps.com/tiles/stamen_terrain/{z}/{x}/{y}{r}.png?api_key=5565dba9-acef-49ca-9f49-ae21924e5b84', attr:'&copy; Stadia Maps &copy; Stamen Design &copy; OpenStreetMap', opts:{maxZoom:18}}
 ];
 var currentTileLayer = null;
 var userPickedBasemap = false;
@@ -1253,22 +1328,23 @@ function renderTimeSeries(){
 }
 
 // ─────────────────────────────────────────────────
-//  Storage time series
+//  Storage time series (single series — no metric dropdown)
 // ─────────────────────────────────────────────────
 var stData=null;
+var stMetricKey=null;   // resolved single data key (not 'dates')
+
+function getStorageKey(){
+  if(!stData) return null;
+  var keys=Object.keys(stData).filter(function(k){ return k!=='dates'; });
+  return keys.length?keys[0]:null;
+}
 
 function showStorageSeries(){
   var card=document.getElementById('st-card');
   if(!stData){ card.className=''; return; }
-  // Populate metric dropdown from data keys (excluding 'dates')
-  var sel=document.getElementById('st-metric');
-  sel.innerHTML='';
-  Object.keys(stData).forEach(function(k){
-    if(k==='dates') return;
-    var opt=document.createElement('option');
-    opt.value=k; opt.textContent=k.replace(/_/g,' ');
-    sel.appendChild(opt);
-  });
+  stMetricKey=getStorageKey();
+  var lbl=document.getElementById('st-label');
+  if(lbl) lbl.textContent = stMetricKey ? stMetricKey.replace(/_/g,' ') : '–';
   card.className='active';
   renderStorageSeries();
 }
@@ -1276,7 +1352,8 @@ function showStorageSeries(){
 function renderStorageSeries(){
   if(!stData) return;
   if(document.getElementById('ts-modal').classList.contains('visible')&&currentModalType==='storage') renderTimeSeriesModal();
-  var metric=document.getElementById('st-metric').value;
+  var metric=stMetricKey||getStorageKey();
+  if(!metric){ document.getElementById('st-card').className=''; return; }
   renderChart({
     values: stData[metric], dates: stData.dates,
     svgId:'st-svg', yaxisId:'st-yaxis', axisXId:'st-axis-x',
@@ -1387,16 +1464,18 @@ function openTsModal(type){
     if(basin)   parts.push('Basin: <b>'+basin+'</b>');
   }
   subEl.innerHTML=parts.join('<span class="sub-sep">·</span>');
-  // Sync metric dropdown
+  // Controls: runoff uses a metric dropdown; storage has a single series (static label).
   var modalSel=document.getElementById('ts-modal-metric');
-  modalSel.innerHTML='';
+  var modalLbl=document.getElementById('ts-modal-label');
   if(isStorage){
-    Object.keys(data).forEach(function(k){
-      if(k==='dates') return;
-      var o=document.createElement('option'); o.value=k; o.textContent=k.replace(/_/g,' '); modalSel.appendChild(o);
-    });
-    modalSel.value=document.getElementById('st-metric').value;
+    var key=stMetricKey||getStorageKey();
+    modalSel.style.display='none';
+    modalLbl.style.display='inline-block';
+    modalLbl.textContent=key?key.replace(/_/g,' '):'Storage';
   } else {
+    modalLbl.style.display='none';
+    modalSel.style.display='inline-block';
+    modalSel.innerHTML='';
     [{v:'Surface',l:'Surface Runoff'},{v:'Sub_Surface',l:'Sub-Surface Runoff'},{v:'Precip',l:'Precipitation'}].forEach(function(m){
       var o=document.createElement('option'); o.value=m.v; o.textContent=m.l; modalSel.appendChild(o);
     });
@@ -1408,7 +1487,7 @@ function openTsModal(type){
 
 function syncMetricFromModal(){
   var v=document.getElementById('ts-modal-metric').value;
-  if(currentModalType==='storage'){ document.getElementById('st-metric').value=v; renderStorageSeries(); }
+  if(currentModalType==='storage'){ renderStorageSeries(); }
   else { document.getElementById('ts-metric').value=v; renderTimeSeries(); }
   renderTimeSeriesModal();
 }
@@ -1419,7 +1498,7 @@ function renderTimeSeriesModal(){
   var isStorage=(currentModalType==='storage');
   var data=isStorage?stData:tsData;
   if(!data) return;
-  var metric=document.getElementById('ts-modal-metric').value;
+  var metric=isStorage ? (stMetricKey||getStorageKey()) : document.getElementById('ts-modal-metric').value;
   var values=data[metric], dates=data.dates;
   if(!values||!values.length){ renderModalEmpty(); return; }
   var clean=values.filter(function(v){ return v!==null&&v!==undefined&&!isNaN(v); });

@@ -28,6 +28,12 @@
   #subnav .subtab.active{color:#fff;background:var(--trace);border-color:var(--trace);font-weight:700}
   #pages{height:calc(100vh - 46px);overflow:hidden}
 
+  /* Embedded mode: when this page is loaded inside the main atlas iframe, the
+     parent already shows the shared Map / How to read sub-nav, so we suppress
+     our own bar and let #pages fill the whole iframe height. */
+  body.embedded #subnav{display:none}
+  body.embedded #pages{height:100vh}
+
   #app{display:flex;height:100%}
   #map{flex:1;background:var(--bg)}
   #panel{width:400px;min-width:320px;max-width:620px;background:var(--panel);border-left:1px solid var(--line);
@@ -521,6 +527,16 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
 <script>
+/* ---- embed / theme sync ----
+   index.html loads this page inside an iframe and passes query params:
+     ?theme=light|dark   – kept for future theming parity
+     ?hidesubnav=1       – suppress this page's own sub-nav, because the parent
+                           atlas already shows the shared Map / How to read bar.
+   When embedded we add body.embedded (CSS hides #subnav and expands #pages). */
+const URLQ = new URLSearchParams(location.search);
+const EMBEDDED = URLQ.get("hidesubnav")==="1" || (window.self!==window.top && URLQ.has("hidesubnav"));
+if(EMBEDDED) document.body.classList.add("embedded");
+
 /* Use the files exactly where the project workflow saves them.
    Start the web server from the project root ("Hydrology Website") so these
    relative paths resolve directly. */
