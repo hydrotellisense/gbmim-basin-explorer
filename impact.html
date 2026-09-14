@@ -94,6 +94,8 @@
   .selectionbar .who{font-size:12px;color:var(--muted);line-height:1.35}
   .selectionbar .who b{font-size:15px;color:var(--text);font-variant-numeric:tabular-nums}
   .selectionbar .count{font-size:11px;color:var(--muted);white-space:nowrap}
+  .selectionbar .dslen-label{color:var(--muted)}
+  .selectionbar .dslen-val{font-variant-numeric:tabular-nums;font-weight:700;color:var(--fill)}
   .keyquestions{display:block;margin:0 0 12px}
   .qcard{background:#fff;border:1px solid var(--question-border);border-radius:12px;
     padding:14px 14px 13px;margin:0 0 10px;cursor:default;position:relative;overflow:hidden}
@@ -242,6 +244,8 @@
     vertical-align:3px;margin-right:5px;position:relative}
   .legend-edge:after{content:"›";position:absolute;right:-2px;top:-10px;color:var(--water);
     font-size:16px;font-weight:800}
+  .legend-down{display:inline-block;width:22px;border-top:3px solid var(--fill);
+    vertical-align:3px;margin-right:5px}
   .trendbtn{margin-top:11px;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;
     padding:8px 10px;font-size:12px;font-weight:650;color:var(--trace);background:var(--trace-soft);
     border:1px solid #f0dfae;border-radius:8px;cursor:pointer;transition:background .15s,border-color .15s}
@@ -544,7 +548,9 @@ const DATA = {
   nodes: "Graph/reservoir_graph_nodes.geojson",
   edges: "Graph/reservoir_graph_edges.geojson",
   attrs: "geojson/reservoir_corrected/reservoir.json",
-  traceBase: "geojson/reservoir_corrected/downstream_storage_trace_"
+  traceBase: "geojson/reservoir_corrected/downstream_storage_trace_",
+  // Real downstream river geometry per reservoir (same files index.html uses).
+  downstreamPath: "geojson/reservoir_corrected/downstream_"
 };
 
 const SEASONS = [
@@ -567,6 +573,9 @@ let nodesById = {}, ancestorIndex = {}, attrs = {};
 let selected = null, activeSeason = "monsoon", activeWindow = null;
 let traceCtx = null, nodeLayerById = {};
 let targetCache = {};
+let downstreamPathLayer = null;      // real river geometry for the selected reservoir
+let downstreamPathCache = {};        // gww_id -> GeoJSON (or null if none)
+let downstreamLenKm = null;          // length (km) of the current selection's river path
 let panelWidth = 400;
 let familyById = {}, familyMembers = {}, familyShapeById = {};
 
@@ -581,7 +590,8 @@ function initMap(){
     const d=L.DomUtil.create("div","maplegend");
     d.innerHTML=`<b>Network</b><br>
       <span class="legend-system"></span>light-blue circle = one connected reservoir family<br>
-      <span class="legend-edge"></span>arrow points downstream`;
+      <span class="legend-edge"></span>arrow points downstream<br>
+      <span class="legend-down"></span>selected reservoir's downstream river path`;
     return d;
   };
   legend.addTo(map);
@@ -645,7 +655,12 @@ function backtrack(X){
     const ds=(nodesById[a.id]?.properties.downstream||[]).map(String);
     return ds[0]===X;
   }).map(a=>a.id));
-  return {anc,ancSet,pathNodes,immediate};
+  // Downstream chain from X toward the outlet: the ordered list of nodes the
+  // selected reservoir flows into. downSet includes X plus every node on that
+  // route so the flow path X -> ... -> outlet can be drawn.
+  const down=(nodesById[X]?.properties.downstream||[]).map(String);
+  const downSet=new Set([X,...down]);
+  return {anc,ancSet,pathNodes,immediate,down,downSet};
 }
 
 /* ---- persistent parent-child system grouping ----
@@ -900,6 +915,12 @@ function setEdgeStyle(l,mode="base",color2){
     const color=getCss("--selected");
     l.setStyle({color,weight:5.2,opacity:1,dashArray:null,lineCap:"round"});
     refreshArrow(l,color,1,10);
+  }else if(mode==="downstream"){
+    // Flow path from the selected reservoir toward the outlet — teal, so it
+    // reads distinctly from the amber upstream-impact trace.
+    const color=getCss("--fill");
+    l.setStyle({color,weight:4,opacity:1,dashArray:null,lineCap:"round"});
+    refreshArrow(l,color,1,9);
   }else if(mode==="dim"){
     const color=getCss("--water-dim");
     l.setStyle({color,weight:1.4,opacity:.50,dashArray:"4 8",lineCap:"round"});
@@ -961,6 +982,11 @@ function styleNodeForTrace(l){
     l.setStyle({...nodeStyle(l.feature),radius:8,weight:2.2,color:"#ffffff",
       fillColor:getCss("--trace"),fillOpacity:1});
     l.bringToFront();
+  }else if(traceCtx.downSet && traceCtx.downSet.has(id)){
+    // Nodes on the downstream flow path — teal, matching the downstream edges.
+    l.setStyle({...nodeStyle(l.feature),radius:7,weight:2,color:"#ffffff",
+      fillColor:getCss("--fill"),fillOpacity:1});
+    l.bringToFront();
   }else{
     l.setStyle({...nodeStyle(l.feature),fillOpacity:.28,radius:5,weight:1});
   }
@@ -973,9 +999,23 @@ function edgeOn(l){
     traceCtx.pathNodes.has(String(p.to_id));
 }
 
+/* An edge that lies on the flow path from the selected reservoir toward the
+   outlet: both endpoints are in the downstream chain. */
+function downEdgeOn(l){
+  const p=l.feature.properties;
+  return traceCtx && traceCtx.downSet &&
+    traceCtx.downSet.has(String(p.from_id)) &&
+    traceCtx.downSet.has(String(p.to_id));
+}
+
 function styleEdgeForTrace(l){
   if(!traceCtx){
     setEdgeStyle(l,"base");
+    return;
+  }
+  // Downstream flow path takes precedence so it's always visible.
+  if(downEdgeOn(l)){
+    setEdgeStyle(l,"downstream");
     return;
   }
   if(!edgeOn(l)){
@@ -1004,6 +1044,7 @@ function styleEdgeForTrace(l){
 function resetHighlight(){
   selected=null;
   traceCtx=null;
+  clearDownstreamPath();
   edgeLayer.eachLayer(styleEdgeForTrace);
   nodeLayer.eachLayer(styleNodeForTrace);
   styleFamilySystems();
@@ -1011,15 +1052,99 @@ function resetHighlight(){
   renderIdle();
 }
 
+/* ---- real downstream river path (same geometry index.html draws) ----
+   Loads geojson/reservoir_corrected/downstream_<gww_id>.geojson and draws it
+   as an orange river line flowing from the selected reservoir toward the
+   outlet. Cached per reservoir; silently skipped if the file is absent. */
+function downstreamPathId(X){
+  // The graph node id is the gww_id used to name the per-reservoir files.
+  const a=attrs[String(X)];
+  return String((a && (a.gww_id!=null?a.gww_id:a.id)) || X);
+}
+
+function fetchDownstreamPath(gww){
+  if(gww in downstreamPathCache) return Promise.resolve(downstreamPathCache[gww]);
+  const url=`${DATA.downstreamPath}${encodeURIComponent(gww)}.geojson`;
+  return fetch(url)
+    .then(r=>r.ok?r.json():null)
+    .then(d=>{ downstreamPathCache[gww]=d||null; return downstreamPathCache[gww]; })
+    .catch(()=>{ downstreamPathCache[gww]=null; return null; });
+}
+
+function clearDownstreamPath(){
+  if(downstreamPathLayer){ map.removeLayer(downstreamPathLayer); downstreamPathLayer=null; }
+}
+
+/* Total length (km) of every LineString in a downstream-path GeoJSON, summed
+   over segments with the haversine great-circle distance. Returns null when
+   there is no line geometry. */
+function geojsonLineLengthKm(geo){
+  if(!geo) return null;
+  const R=6371; // km
+  const toRad=d=>d*Math.PI/180;
+  function segKm(a,b){
+    const dLat=toRad(b[1]-a[1]), dLng=toRad(b[0]-a[0]);
+    const lat1=toRad(a[1]), lat2=toRad(b[1]);
+    const h=Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(h)));
+  }
+  function lineKm(coords){
+    let s=0;
+    for(let i=1;i<coords.length;i++) s+=segKm(coords[i-1],coords[i]);
+    return s;
+  }
+  let total=0, any=false;
+  function walk(g){
+    if(!g) return;
+    if(g.type==="FeatureCollection"){ (g.features||[]).forEach(f=>walk(f.geometry)); return; }
+    if(g.type==="Feature"){ walk(g.geometry); return; }
+    if(g.type==="GeometryCollection"){ (g.geometries||[]).forEach(walk); return; }
+    if(g.type==="LineString"){ total+=lineKm(g.coordinates||[]); any=true; return; }
+    if(g.type==="MultiLineString"){ (g.coordinates||[]).forEach(c=>{ total+=lineKm(c); any=true; }); return; }
+  }
+  walk(geo);
+  return any ? total : null;
+}
+
+/* Write the computed river length into the selection bar (if present). */
+function updateDownstreamLengthUI(km){
+  const el=document.getElementById("dsLen");
+  if(!el) return;
+  el.textContent = (km!=null && isFinite(km)) ? `${fmt(km,1)} km` : "—";
+}
+
+function drawDownstreamPath(geo){
+  clearDownstreamPath();
+  if(!geo) return;
+  const color=getCss("--fill");   // teal river path — distinct from amber impact trace
+  downstreamPathLayer=L.geoJSON(geo,{
+    style:{color,weight:3,opacity:.9,lineCap:"round",lineJoin:"round"},
+    pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:2.5,color,fillColor:color,fillOpacity:.85,weight:1})
+  }).addTo(map);
+  // Keep it above the family shapes but below the reservoir nodes.
+  if(nodeLayer && nodeLayer.bringToFront) nodeLayer.bringToFront();
+}
+
 async function select(X){
   selected=String(X);
   const requested=selected;
-  const {anc,ancSet,pathNodes,immediate}=backtrack(selected);
-  traceCtx={X:selected,ancSet,pathNodes};
+  const {anc,ancSet,pathNodes,immediate,downSet}=backtrack(selected);
+  traceCtx={X:selected,ancSet,pathNodes,downSet};
 
   edgeLayer.eachLayer(styleEdgeForTrace);
   nodeLayer.eachLayer(styleNodeForTrace);
   styleFamilySystems();
+
+  // Draw the real downstream river path for this reservoir (like index.html).
+  // Independent of the trace-data fetch below, so it shows even if that fails.
+  clearDownstreamPath();
+  downstreamLenKm=null;
+  fetchDownstreamPath(downstreamPathId(selected)).then(geo=>{
+    if(selected!==requested) return;   // a newer selection superseded this one
+    drawDownstreamPath(geo);
+    downstreamLenKm=geojsonLineLengthKm(geo);
+    updateDownstreamLengthUI(downstreamLenKm);   // fills the selection-bar slot if rendered
+  });
 
   document.getElementById("content").innerHTML=
     `<p class="hint">Loading upstream data for reservoir ${selected}…</p>`;
@@ -1661,7 +1786,10 @@ function renderPanel(X,anc,immediate,data){
 
   html+=`<div class="selectionbar">
     <div class="who">Downstream target<br><b>Reservoir #${X}</b></div>
-    <div class="count">${anc.length===0?"headwater":anc.length+" upstream"}</div>
+    <div class="count" style="text-align:right;line-height:1.5">
+      ${anc.length===0?"headwater":anc.length+" upstream"}
+      <br><span class="dslen-label">downstream flow length:</span> <span id="dsLen" class="dslen-val">${downstreamLenKm!=null?fmt(downstreamLenKm,1)+" km":"…"}</span>
+    </div>
   </div>`;
 
   if(gdw!=null || country){
@@ -1792,6 +1920,10 @@ function initPanelDrag(){
 
 function bindPanelEvents(X){
   const c=document.getElementById("content");
+
+  // Keep the selection-bar river length in sync with whatever we've computed
+  // so far (the path fetch may have resolved before or after this render).
+  updateDownstreamLengthUI(downstreamLenKm);
 
   // Trend buttons: open the yearly view, never trigger the row/card navigation.
   c.querySelectorAll(".trendbtn").forEach(el=>{
